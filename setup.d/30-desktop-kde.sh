@@ -9,6 +9,15 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
 
 apt_install_list "$LISTS_DIR/apt-desktop.txt"
 
+# ---- boot into the desktop (matters when the base came from the Ubuntu Server automated installer) ----
+if dpkg -s kubuntu-desktop >/dev/null 2>&1; then
+  if [[ "$(systemctl get-default)" != "graphical.target" ]]; then
+    sudo systemctl set-default graphical.target >/dev/null
+    log "default boot target set to graphical"
+  fi
+  systemctl is-enabled --quiet sddm 2>/dev/null || sudo systemctl enable sddm >/dev/null 2>&1 || warn "could not enable sddm"
+fi
+
 # ---- Flatpak + Flathub (leaf GUI apps only; IDEs and anything touching the toolchain stay apt/.deb) ----
 flatpak remote-list 2>/dev/null | grep -q '^flathub' || sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 mapfile -t fps < <(read_list "$LISTS_DIR/flatpaks.txt")

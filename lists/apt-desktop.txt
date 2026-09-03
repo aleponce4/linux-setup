@@ -1,4 +1,8 @@
 # Desktop apps and KDE integration. Installed by setup.d/30-desktop-kde.sh
+# kubuntu-desktop pulls in Plasma, SDDM and the whole KDE application set. It is what turns the
+# Ubuntu Server base laid down by the automated installer into a full Kubuntu desktop. Harmless
+# (already satisfied) if this ever runs on a machine installed from the Kubuntu desktop image.
+kubuntu-desktop
 flatpak
 plasma-discover-backend-flatpak
 kde-config-flatpak
