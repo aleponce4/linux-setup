@@ -1,0 +1,15 @@
+name: juq-ana
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - ipython
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - scikit-learn
+  - scipy
+  - seaborn
+  - umap-learn

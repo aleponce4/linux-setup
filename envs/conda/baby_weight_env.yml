@@ -1,0 +1,11 @@
+name: baby_weight_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+      - streamlit>=1.28.0
+      - pandas>=2.2.0
+      - matplotlib>=3.9.0
+      - requests>=2.31.0

@@ -1,0 +1,13 @@
+# owner/repo (GitHub) or full URL; cloned into $WORK_DIR by setup.d/80-envs.sh (private ones need 'gh auth login' first)
+aleponce4/libs-spectroscopy-workbench
+Onteko/ProLIBSpector
+aleponce4/Seed_LIBS_Classification
+aleponce4/Bell_Seed_project
+aleponce4/lab-bioinfo-templates
+aleponce4/preclinical-study-analysis-shiny
+aleponce4/Survival_Shinny_App
+aleponce4/veeev-nat-hist-nfcore-isaac
+aleponce4/akodon-genome-assembly-workflow
+aleponce4/baby-weight-tracker
+eponce00/family-life-plan
+cvat-ai/cvat

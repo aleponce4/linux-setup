@@ -1,0 +1,27 @@
+# Desktop apps and KDE integration. Installed by setup.d/30-desktop-kde.sh
+flatpak
+plasma-discover-backend-flatpak
+kde-config-flatpak
+papirus-icon-theme
+fonts-inter
+fonts-jetbrains-mono
+fonts-noto-color-emoji
+python3-dbus
+python3-gi
+ydotool
+ksshaskpass
+kwalletmanager
+inkscape
+vlc
+okular
+okular-extra-backends
+kate
+kolourpaint
+filelight
+spectacle
+kdeconnect
+krdp
+kdeplasma-addons
+network-manager-openconnect
+openconnect
+cameractrls

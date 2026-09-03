@@ -1,0 +1,17 @@
+[Desktop Entry]
+Name=Agent Runner
+Comment=Claude Code, Codex, Antigravity, SSH hosts, repos and linux-setup modules from KRunner
+Icon=utilities-terminal
+Type=Service
+X-KDE-PluginInfo-Author=linux-setup
+X-KDE-PluginInfo-Name=agentrunner
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-License=MIT
+X-KDE-PluginInfo-EnabledByDefault=true
+X-KDE-ServiceTypes=KRunner/DBus
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=org.kde.agentrunner
+X-Plasma-DBusRunner-Path=/AgentRunner
+X-Plasma-Request-Actions-Once=true
+X-KRunner-MinLetterCount=2
+X-KRunner-TriggerWords=cc;cx;agy;claude;codex;gemini;ssh;repo;code;setup

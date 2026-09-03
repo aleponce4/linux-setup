@@ -1,0 +1,57 @@
+# ~/.zshrc (managed by linux-setup; edit in the repo, not here)
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+export EDITOR="code --wait"
+export VISUAL="$EDITOR"
+export LANG=en_US.UTF-8
+
+# history: big, shared, no dups
+HISTFILE="$HOME/.zsh_history"; HISTSIZE=200000; SAVEHIST=200000
+setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS EXTENDED_HISTORY
+setopt AUTO_CD INTERACTIVE_COMMENTS NO_BEEP
+bindkey -e
+bindkey '^[[1;5C' forward-word; bindkey '^[[1;5D' backward-word   # ctrl+arrows
+bindkey '^[[H' beginning-of-line; bindkey '^[[F' end-of-line
+
+# completion
+autoload -Uz compinit && compinit -d "$HOME/.cache/zcompdump"
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
+# tool hooks (each guarded so a missing tool never breaks the shell)
+command -v starship >/dev/null && eval "$(starship init zsh)"
+command -v zoxide   >/dev/null && eval "$(zoxide init zsh)"
+command -v atuin    >/dev/null && eval "$(atuin init zsh --disable-up-arrow)"
+command -v direnv   >/dev/null && eval "$(direnv hook zsh)"
+[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
+[ -f /usr/share/doc/fzf/examples/completion.zsh ]   && source /usr/share/doc/fzf/examples/completion.zsh
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+
+# node (fnm), python (uv), conda (micromamba)
+export FNM_PATH="$HOME/.local/share/fnm"
+[ -d "$FNM_PATH" ] && { export PATH="$FNM_PATH:$PATH"; eval "$(fnm env --use-on-cd --shell zsh)"; }
+export MAMBA_ROOT_PREFIX="$HOME/micromamba"
+command -v micromamba >/dev/null && eval "$(micromamba shell hook -s zsh)"
+alias conda=micromamba
+
+# aliases
+alias ls='eza --group-directories-first --icons=auto'
+alias ll='eza -l --git --group-directories-first --icons=auto'
+alias la='eza -la --git --group-directories-first --icons=auto'
+alias lt='eza --tree --level=2 --icons=auto'
+alias cat='bat --paging=never --style=plain'
+alias du='dust'
+alias df='duf'
+alias top='btop'
+alias lg='lazygit'
+alias g='git'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias open='xdg-open'
+alias r='radian'
+alias venv='uv venv && source .venv/bin/activate'
+alias snapnow='sudo timeshift --create --comments "manual $(date +%F_%T)"'
+alias reload='exec zsh'
+
+# Ghostty: sane title
+precmd() { print -Pn "\e]0;%~\a"; }

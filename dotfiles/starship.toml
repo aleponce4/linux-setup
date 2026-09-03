@@ -1,0 +1,44 @@
+# ~/.config/starship.toml (managed by linux-setup) - fast, one line, shows what matters for data work
+add_newline = false
+command_timeout = 800
+format = "$directory$git_branch$git_status$python$conda$rlang$nodejs$cmd_duration$line_break$character"
+
+[directory]
+truncation_length = 4
+truncate_to_repo = true
+style = "bold blue"
+
+[git_branch]
+format = "[$symbol$branch]($style) "
+style = "bold purple"
+
+[git_status]
+format = "([$all_status$ahead_behind]($style) )"
+style = "yellow"
+
+[python]
+format = "[${symbol}${pyenv_prefix}(${version} )(\\($virtualenv\\) )]($style)"
+symbol = " "
+detect_extensions = ["py", "ipynb"]
+
+[conda]
+format = "[$symbol$environment]($style) "
+symbol = " "
+ignore_base = true
+
+[rlang]
+format = "[$symbol($version )]($style)"
+symbol = " "
+
+[nodejs]
+format = "[$symbol($version )]($style)"
+symbol = " "
+
+[cmd_duration]
+min_time = 2000
+format = "[$duration]($style) "
+style = "dimmed white"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"

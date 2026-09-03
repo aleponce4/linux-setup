@@ -1,0 +1,33 @@
+# System libraries needed to build R packages and scientific Python wheels, plus science apps in the repos.
+# Installed by setup.d/50-science.sh
+libcurl4-openssl-dev
+libssl-dev
+libxml2-dev
+libfontconfig1-dev
+libharfbuzz-dev
+libfribidi-dev
+libfreetype-dev
+libpng-dev
+libtiff5-dev
+libjpeg-dev
+libcairo2-dev
+libgit2-dev
+libgdal-dev
+libproj-dev
+libgeos-dev
+libudunits2-dev
+libhdf5-dev
+libnetcdf-dev
+libblas-dev
+liblapack-dev
+libopenblas-dev
+gfortran
+libmagick++-dev
+libglpk-dev
+libgmp-dev
+libmpfr-dev
+python3-tk
+tk-dev
+pymol
+pandoc
+texinfo

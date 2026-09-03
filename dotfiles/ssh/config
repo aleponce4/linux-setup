@@ -1,0 +1,24 @@
+# ~/.ssh/config (managed by linux-setup). Private keys are NOT in the repo; restore ~/.ssh/id_ed25519 from the secrets archive.
+
+Host uthsc-wsl
+  HostName 172.21.148.227
+  User alex_ubuntu
+  Port 2222
+
+# ISAAC-NG (UT HPC). Verify the login hostname and set your NetID.
+Host isaac
+  HostName login.isaac.utk.edu
+  User CHANGE_ME_netid
+
+Host github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+
+Host *
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_ed25519
+  ServerAliveInterval 30
+  ServerAliveCountMax 4
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m

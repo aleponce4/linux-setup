@@ -1,0 +1,5 @@
+# npm -g packages (Node via fnm). Installed by setup.d/40-dev-tools.sh
+@openai/codex
+@github/copilot
+opencode-ai
+netlify-cli

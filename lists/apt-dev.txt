@@ -1,0 +1,12 @@
+# Developer tooling from Ubuntu repos. Installed by setup.d/40-dev-tools.sh (Docker/VS Code/gh come from vendor repos in the same module)
+cmake
+ninja-build
+gdb
+clang
+clang-format
+pkg-config
+sqlite3
+libsqlite3-dev
+shellcheck
+direnv
+distrobox

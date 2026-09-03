@@ -1,0 +1,8 @@
+# Positron user-installed extensions (Positron bundles Python/R/Jupyter/Quarto support itself)
+charliermarsh.ruff
+github.vscode-pull-request-github
+meta.pyrefly
+posit.air-vscode
+posit.assistant
+posit.publisher
+posit.shiny

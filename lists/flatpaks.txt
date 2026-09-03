@@ -1,0 +1,5 @@
+# Flathub application ids. Installed by setup.d/30-desktop-kde.sh
+net.mkiol.SpeechNote
+com.spotify.Client
+com.github.marktext.marktext
+md.obsidian.Obsidian

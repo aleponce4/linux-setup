@@ -1,0 +1,5 @@
+# Global Python CLI tools, installed with: uv tool install <name>
+labelme
+radian
+ruff
+jupyterlab

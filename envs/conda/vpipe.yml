@@ -1,0 +1,12 @@
+name: vpipe
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - mamba
+  - nextflow
+  - snakemake
+  - shorah
+  - samtools
+  - bcftools
+  - bowtie2

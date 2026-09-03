@@ -1,0 +1,2 @@
+# name  image   -> created by setup.d/80-envs.sh (distrobox on the Docker backend). Enter with: distrobox enter <name>
+arch  docker.io/library/archlinux:latest

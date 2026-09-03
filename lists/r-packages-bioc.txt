@@ -1,0 +1,24 @@
+# Bioconductor packages in use (install via BiocManager::install / pak)
+AnnotationDbi
+Biobase
+BiocGenerics
+BiocParallel
+Biostrings
+DESeq2
+DOSE
+GO.db
+GOSemSim
+GenomeInfoDb
+GenomicRanges
+IRanges
+KEGGREST
+SummarizedExperiment
+clusterProfiler
+enrichplot
+fgsea
+ggtree
+ggtangle
+org.Hs.eg.db
+org.Mm.eg.db
+qvalue
+treeio
