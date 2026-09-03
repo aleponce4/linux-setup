@@ -1,5 +1,8 @@
 {
     "workbench.colorTheme": "Visual Studio Dark",
+    "window.autoDetectColorScheme": true,
+    "workbench.preferredDarkColorTheme": "Visual Studio Dark",
+    "workbench.preferredLightColorTheme": "Default Light Modern",
     "security.workspace.trust.untrustedFiles": "open",
     "notebook.output.textLineLimit": 50,
     "workbench.settings.applyToAllProfiles": ["notebook.output.textLineLimit"],
@@ -29,7 +32,7 @@
     "quarto.useBundledQuartoInPositron": true,
     "remote.SSH.showLoginTerminal": true,
     "remote.SSH.useExecServer": false,
-    "remote.SSH.remotePlatform": { "isaac": "linux", "uthsc-wsl": "linux" },
+    "remote.SSH.remotePlatform": { "isaac": "linux" },
     "remote.tunnels.access.preventSleep": true,
     "claudeCode.preferredLocation": "panel",
     "chatgpt.composerEnterBehavior": "cmdIfMultiline",

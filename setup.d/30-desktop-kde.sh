@@ -190,6 +190,33 @@ EOF
   fi
 fi
 
+# ---- window style: Klassy (upstream's own Ubuntu 26.04 repo). Falls back to Breeze if the package is unavailable. ----
+if [[ "${ENABLE_KLASSY:-yes}" == "yes" ]]; then
+  OBS="https://download.opensuse.org/repositories/home:/paulmcauley/xUbuntu_26.04"
+  if ! dpkg -s klassy >/dev/null 2>&1; then
+    if curl -fsI "$OBS/Release.key" >/dev/null 2>&1; then
+      add_apt_repo klassy "$OBS/Release.key" "deb [signed-by=/etc/apt/keyrings/klassy.gpg] $OBS/ /"
+      apt_install klassy
+    else
+      warn "Klassy repo unreachable for 26.04; staying on Breeze"
+    fi
+  fi
+  if dpkg -s klassy >/dev/null 2>&1 && have kwriteconfig6; then
+    # KWin renamed the decoration group between Plasma versions; writing both is harmless and version-proof
+    for g in org.kde.kdecoration2 org.kde.kdecoration3; do
+      kwriteconfig6 --file kwinrc --group "$g" --key library org.kde.klassy
+      kwriteconfig6 --file kwinrc --group "$g" --key theme Klassy
+      kwriteconfig6 --file kwinrc --group "$g" --key BorderSize None
+      kwriteconfig6 --file kwinrc --group "$g" --key BorderSizeAuto false
+    done
+    kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Klassy
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+    log "Klassy set as window decoration and application style (fine-tune with: klassy-settings)"
+  else
+    warn "Klassy not installed; Breeze remains the window style"
+  fi
+fi
+
 # ---- panel layout (one floating bottom panel, icon-only tasks, pinned apps) via the Plasma scripting API ----
 if have qdbus6 && [[ -f "$REPO_DIR/dotfiles/kde/panel.js" ]] && [[ ! -f "$HOME/.config/.linux-setup-panel-applied" ]]; then
   if qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat "$REPO_DIR/dotfiles/kde/panel.js")" >/dev/null 2>&1; then

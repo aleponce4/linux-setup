@@ -25,12 +25,31 @@ GUI configuration when it is faster, Ubuntu package compatibility, agent-driven 
 
 ## Decisions requiring third-party components
 
-Filled in after verified research (2026-09-03). Rule of thumb: on Kubuntu 26.04 LTS Plasma stays at 6.6.x for the life of the
-release, so a compiled third-party component is only as risky as its build recipe; a daemon that rewrites config files at runtime
-is riskier than a static theme.
+Settled 2026-09-03 after research and adversarial verification. Rule of thumb: on Kubuntu 26.04 LTS Plasma stays at 6.6.x for the
+life of the release, so a *packaged* third-party theme is low risk; a *daemon that rewrites config files at runtime* is not.
 
-- **Window style**: see section "Decision: window style" below.
-- **Color system**: see section "Decision: color system" below.
+### Window style: Klassy (adopted)
+
+Klassy 6.7.2 targets Plasma 6.6.1 and newer, and upstream publishes an official Ubuntu 26.04 build at
+`download.opensuse.org/repositories/home:/paulmcauley/xUbuntu_26.04/` (repository dated 2026-09-02, with `Release.key` and an
+`amd64` tree). That removes the objection that mattered: no source build, no unmaintained community package, no PPA archaeology.
+Verification also established what is *not* true: Klassy is absent from the Ubuntu archive and from Debian, and the only Launchpad
+PPA carrying the name ships a Plasma 5.27-era build that would not work here.
+
+`setup.d/30-desktop-kde.sh` adds that repo, installs `klassy`, and sets it as both window decoration and application style, writing
+the `org.kde.kdecoration2` and `org.kde.kdecoration3` groups so a KWin group rename cannot silently strand the setting. If the repo
+is unreachable or the package fails, the module logs a warning and Breeze stays in place: the desktop is never left half-themed.
+Set `ENABLE_KLASSY="no"` to opt out. Klassy's own settings stay at their restrained defaults; tune with `klassy-settings`, never by
+hand-editing `klassyrc`, and keep the look modest: small radius, no borders, thin titlebar, soft shadow, no glow.
+
+### Color system: native Plasma, wallpaper-derived (kde-material-you-colors rejected)
+
+Plasma 6.6 derives the accent colour from the wallpaper natively (`kdeglobals` > `General` > `AccentColorFromWallpaper`, plus
+optional tinting), which already satisfies "one colour system, wallpaper-derived". `kde-material-you-colors` would add a
+background Python daemon that rewrites colour schemes and per-app config on every wallpaper change: more reach (it can also theme
+Konsole and friends), but it is exactly the runtime-mutating component this document exists to keep out, and it fails in ways that
+are tedious to debug. Native it is, with app-level consistency handled once, statically: Chrome follows the system scheme, VS Code
+uses `window.autoDetectColorScheme`, Ghostty and Konsole carry a matching dark palette.
 
 ## Consistency across apps (the part people forget)
 

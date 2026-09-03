@@ -37,6 +37,8 @@ check "Desktop: Speech Note, Mark Text, Obsidian flatpaks" bash -c "flatpak info
 check "Desktop: Chrome default browser, Zoom" bash -c "xdg-settings get default-web-browser | grep -qi chrome && command -v zoom"
 check "Desktop: Papirus icons, Meta -> KRunner" bash -c "[[ -d /usr/share/icons/Papirus-Dark ]] && grep -q 'org.kde.krunner' $HOME/.config/kwinrc"
 check "Desktop: 5 named workspaces"          bash -c "[[ \$(kreadconfig6 --file kwinrc --group Desktops --key Number) == 5 ]]"
+check "Desktop: accent colour from wallpaper" bash -c "[[ \$(kreadconfig6 --file kdeglobals --group General --key AccentColorFromWallpaper) == true ]]"
+[[ "${ENABLE_KLASSY:-yes}" == "yes" ]] && check "Desktop: Klassy window style active" bash -c "dpkg -s klassy && kreadconfig6 --file kdeglobals --group KDE --key widgetStyle | grep -qi klassy"
 check "Desktop: window rules present"        grep -q 'linux-setup' "$HOME/.config/kwinrulesrc"
 check "Desktop: agent-runner plugin installed" bash -c "[[ -L $HOME/.local/share/krunner/dbusplugins/agentrunner.desktop && -x $HOME/.local/bin/agent-runner ]] && python3 -c 'import dbus, gi'"
 [[ "${ENABLE_TILING_SCRIPT:-yes}" == "yes" ]] && check "Desktop: Polonium KWin script present" bash -c "kpackagetool6 --type=KWin/Script --list 2>/dev/null | grep -q polonium"
