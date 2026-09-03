@@ -35,6 +35,7 @@ classification, R/Shiny apps, bioinformatics pipelines that run on the ISAAC HPC
 - Node: `fnm` (v24 default), globals in `lists/npm-globals.txt`.
 
 ## Do not
+- Add themes, icon sets, Plasma widgets, docks, KWin effects/scripts or fonts outside the choices in `~/linux-setup/docs/design-system.md` (one font pair, one icon set, one palette, one window style, one panel, KRunner). Replacing a choice is fine in a commit that removes the old one; stacking is not.
 - Delete or move anything under `/data`, `/backup`, `/mnt/winrescue` without an explicit instruction.
 - Edit `/etc/fstab`, `/etc/sudoers*`, firewall or sshd config by hand; use the storage/remote modules.
 - Install Anaconda/`defaults`-channel conda, Docker Desktop, or snap versions of apps that have apt/Flatpak versions.
