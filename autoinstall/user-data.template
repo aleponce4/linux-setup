@@ -1,0 +1,161 @@
+#cloud-config
+# Ubuntu Server 26.04.1 automated install for "strix".
+# Placeholders are substituted by build-iso.sh: @@PWHASH@@ @@SSHKEY@@ @@TSKEY@@ @@REPO@@
+# The result is a minimal Ubuntu with SSH and Tailscale up; the first-boot service then runs
+# linux-setup/bootstrap.sh, which installs the Kubuntu desktop and everything else.
+autoinstall:
+  version: 1
+  # Nothing is asked interactively. With the "autoinstall" kernel parameter present, the
+  # disk-erase confirmation is skipped too.
+  interactive-sections: []
+  refresh-installer:
+    update: false
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: America/Chicago
+
+  # No network section on purpose. Subiquity's default is DHCP on every interface, which is the
+  # best-tested path. Wi-Fi is deliberately NOT configured here: a malformed wifis block can make
+  # netplan fail to generate and take working Ethernet down with it. Wi-Fi is added later from the
+  # running desktop through NetworkManager.
+
+  early-commands:
+    # 1. Reachability first, before any disk is touched. Entirely best-effort: this must never
+    #    abort the install. If it works, a stalled installer is still reachable over SSH.
+    - |
+      set +e
+      curl -fsSL https://tailscale.com/install.sh | sh
+      systemctl start tailscaled 2>/dev/null
+      sleep 5
+      tailscale up --authkey='@@TSKEY@@' --hostname=strix-installer --ssh --accept-routes=false
+      mkdir -p /root/.ssh
+      printf '%s\n' '@@SSHKEY@@' >> /root/.ssh/authorized_keys
+      chmod 700 /root/.ssh; chmod 600 /root/.ssh/authorized_keys
+      systemctl start ssh 2>/dev/null
+      tailscale status > /var/log/ts-installer.log 2>&1
+      true
+    # 2. Target guard. Strict on purpose: if the disk under /dev/nvme0n1 is not the ~1 TB NVMe,
+    #    the install stops here rather than erasing something else. Tailscale is already up by
+    #    now, so a stop is inspectable rather than fatal.
+    - |
+      set -e
+      d=/dev/nvme0n1
+      test -b "$d"
+      sz=$(blockdev --getsize64 "$d")
+      test "$sz" -gt 900000000000
+      test "$sz" -lt 1100000000000
+      echo "guard ok: $d is $sz bytes, model $(cat /sys/block/nvme0n1/device/model 2>/dev/null)"
+
+  storage:
+    config:
+      - type: disk
+        id: disk-nvme
+        path: /dev/nvme0n1
+        ptable: gpt
+        wipe: superblock-recursive
+        preserve: false
+        grub_device: false
+      - type: partition
+        id: part-esp
+        device: disk-nvme
+        number: 1
+        size: 1G
+        flag: boot
+        grub_device: true
+      - type: partition
+        id: part-root
+        device: disk-nvme
+        number: 2
+        size: -1
+      - type: format
+        id: fmt-esp
+        volume: part-esp
+        fstype: fat32
+      - type: format
+        id: fmt-root
+        volume: part-root
+        fstype: btrfs
+      - type: mount
+        id: mnt-root
+        device: fmt-root
+        path: /
+      - type: mount
+        id: mnt-esp
+        device: fmt-esp
+        path: /boot/efi
+
+  identity:
+    hostname: strix
+    realname: Alex Ponce
+    username: alexponce
+    password: '@@PWHASH@@'
+
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys:
+      - '@@SSHKEY@@'
+
+  packages:
+    - curl
+    - git
+    - ca-certificates
+    - btrfs-progs
+    - openssh-server
+
+  late-commands:
+    # Tailscale into the installed system, so the machine rejoins the tailnet on first boot even
+    # if the desktop bootstrap later fails.
+    - curtin in-target --target=/target -- bash -c 'curl -fsSL https://tailscale.com/install.sh | sh'
+    - curtin in-target --target=/target -- systemctl enable tailscaled
+    # Temporary passwordless sudo so the unattended first-boot run can work. The bootstrap replaces
+    # this with the narrow agent rule, and the first-boot script deletes this file when it finishes.
+    - |
+      printf '%s\n' 'alexponce ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/00-firstboot
+      chmod 440 /target/etc/sudoers.d/00-firstboot
+
+  # Cloud-config applied to the installed system on its first boot.
+  user-data:
+    write_files:
+      - path: /usr/local/sbin/firstboot-setup
+        permissions: '0755'
+        owner: 'root:root'
+        content: |
+          #!/bin/bash
+          # Runs once, after the first boot of the installed system. Everything it does is
+          # recoverable: if it fails, SSH and Tailscale are already up and the machine is reachable.
+          exec >>/var/log/firstboot-setup.log 2>&1
+          set -x
+          date
+          for i in $(seq 1 30); do ping -c1 -W2 1.1.1.1 >/dev/null 2>&1 && break; sleep 5; done
+          tailscale up --authkey='@@TSKEY@@' --hostname=strix --ssh || true
+          runuser -u alexponce -- bash -lc 'curl -fsSL @@REPO@@/bootstrap.sh | bash'
+          rc=$?
+          echo "bootstrap exit: $rc"
+          # hand privilege back to the narrow rule the bootstrap installed
+          if [ -f /etc/sudoers.d/90-agent-admin ]; then rm -f /etc/sudoers.d/00-firstboot; fi
+          systemctl disable firstboot-setup.service || true
+          date
+      - path: /etc/systemd/system/firstboot-setup.service
+        permissions: '0644'
+        owner: 'root:root'
+        content: |
+          [Unit]
+          Description=One-shot workstation provisioning after install
+          After=network-online.target
+          Wants=network-online.target
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/firstboot-setup
+          TimeoutStartSec=0
+          RemainAfterExit=yes
+          [Install]
+          WantedBy=multi-user.target
+    runcmd:
+      - [ systemctl, enable, --now, tailscaled ]
+      - [ systemctl, enable, firstboot-setup.service ]
+      - [ systemctl, start, --no-block, firstboot-setup.service ]
+
+  shutdown: reboot
