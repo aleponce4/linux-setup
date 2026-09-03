@@ -75,10 +75,18 @@ python3 - "$WORK/grub.cfg" <<'PY'
 import re, sys
 p = sys.argv[1]
 s = open(p, encoding='utf-8').read()
-param = r' autoinstall ds=nocloud\;s=/cdrom/nocloud/'
+# Ubuntu's kernel line ends with "---", which separates installer arguments from ones handed on to
+# the installed system. "autoinstall" only takes effect on the installer side, so it must be
+# inserted BEFORE that separator, not appended to the end of the line.
+param = r'autoinstall ds=nocloud\;s=/cdrom/nocloud/'
 def add(m):
-    return m.group(0) if 'autoinstall' in m.group(0) else m.group(0) + param
-s2, n = re.subn(r'(?m)^\s*linux\s+/casper/vmlinuz\S*.*$', add, s)
+    line = m.group(0)
+    if 'autoinstall' in line:
+        return line
+    if '---' in line:
+        return line.replace('---', param + ' ---', 1)
+    return line.rstrip() + ' ' + param
+s2, n = re.subn(r'(?m)^\s*linux\s+/casper/vmlinuz.*$', add, s)
 if n == 0:
     sys.exit('no /casper/vmlinuz kernel line found in grub.cfg; aborting rather than guessing')
 s2 = re.sub(r'(?m)^\s*set\s+timeout=.*$', 'set timeout=1', s2)
