@@ -119,6 +119,21 @@ setup_btrfs_disk() {   # setup_btrfs_disk DEVICE_ID LABEL -> ensures a single bt
   local dev="$1" label="$2" part
   [[ -e "$dev" ]] || { warn "$dev not present; skipping $label"; return 1; }
   if blkid -L "$label" >/dev/null 2>&1; then return 0; fi
+  # NEVER format the disk this system is running from. Without this, pointing SATA_SSD_ID at the
+  # root disk (which happens if root was installed there) makes this function wipe its own OS.
+  local target root_src root_disk
+  target="$(readlink -f "$dev")"
+  root_src="$(findmnt -no SOURCE / | sed 's/\[.*//')"
+  root_disk="$(lsblk -no PKNAME "$root_src" 2>/dev/null | head -1)"
+  if [[ -n "$root_disk" && "$target" == "/dev/$root_disk" ]]; then
+    warn "REFUSING to format $target as '$label': it holds the running root filesystem"
+    return 1
+  fi
+  # also refuse anything currently mounted
+  if lsblk -no MOUNTPOINT "$target" 2>/dev/null | grep -qE '^/'; then
+    warn "REFUSING to format $target as '$label': it has mounted filesystems"
+    return 1
+  fi
   if [[ "$ALLOW_FORMAT" != "yes" ]]; then
     warn "no filesystem labeled $label on $dev. Re-run with --format to create it (destroys everything on that disk)."; return 1
   fi
