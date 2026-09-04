@@ -1,201 +1,152 @@
-# Handoff: finishing the migration without this chat session
+# Handoff: installing Kubuntu and finishing the setup
 
-This session runs on the Windows install and disappears when the machine reboots into the installer.
-Everything you need afterwards is here. This file also lives at `/mnt/winrescue/Linux_migration/HANDOFF.md`
-on the new system, and the setup repo is public at `https://github.com/aleponce4/linux-setup`.
+The automated-installer route was abandoned on 2026-09-04 after a run of Windows-side failures (a flash
+controller that refused writes, raw sector writes denied, filenames mangled by Windows' 8.3 view, and a
+disk serial Windows reported one character differently from Linux). The reliable path is a normal Kubuntu
+install from a Ventoy stick, then the setup repo does everything else from inside Linux.
 
-Machine facts you will need:
+This file lives at `https://github.com/aleponce4/linux-setup/blob/main/HANDOFF.md` and on the rescue drive.
 
 | | |
 |---|---|
-| Login | `alexponce` (lowercase; the installer rejects capitals) |
-| Password | the one you chose earlier. **Change it after first login**, it passed through a chat log |
+| Login | `alexponce` (lowercase) |
 | Hostname | `strix` |
-| SSH key | your existing `id_ed25519` is already authorised, password login also works |
-| Root disk | NVMe, Btrfs, no encryption |
+| Root disk | **NVMe Samsung 990 PRO**, Btrfs, no encryption. Windows is erased |
+| Data disk | SATA SSD 860 EVO becomes `/data` |
+| Backups | 8 TB HDD: `WINRESCUE` (NTFS, your data) + free space for `/backup` |
 | Setup repo | `https://github.com/aleponce4/linux-setup` |
 
 ---
 
-## 1. Getting in
+## 1. Install Kubuntu
 
-The machine joins your tailnet by itself. Two names appear, in order:
+Boot the Ventoy stick (F8 at the ASUS logo, pick the UEFI USB entry), choose
+`kubuntu-26.04.1-desktop-amd64.iso`, then "Try or Install Kubuntu".
 
-- **`strix-installer`** — the live installer, during the install. Appears within a few minutes of the reboot.
-- **`strix`** — the installed system. Appears after it reboots, and stays.
+| Screen | Answer |
+|---|---|
+| Language | English |
+| Location | America/Chicago |
+| Keyboard | English (US) |
+| Installation type | **Erase disk** |
+| Target device | **Samsung SSD 990 PRO 1TB** (the NVMe). Do **not** pick the 860 EVO or the 8 TB HGST |
+| Filesystem | **btrfs** |
+| Swap | No swap |
+| Encryption | unchecked |
+| Name / login / computer | `Alex Ponce` / **`alexponce`** / **`strix`** |
+| Log in automatically | yes |
 
-```bash
-ssh alexponce@strix
-```
+The username and hostname matter: the setup repo, the SSH config and the scripts all reference them.
+Btrfs matters because the snapshot and rollback design depends on it, and Calamares creates the `@` and
+`@home` subvolumes that Timeshift's Btrfs mode needs.
 
-Tailscale SSH is enabled, so from a device on your tailnet this works without key juggling. `mosh strix`
-also works once the desktop stack is in, and survives flaky links better.
-
-If neither name shows up after about 25 minutes, jump to section 5.
-
----
-
-## 2. What runs on its own
-
-You should not have to do anything for this. Sequence after the reboot:
-
-1. The stick boots and the installer runs unattended, no prompts.
-2. Before touching any disk it brings up Tailscale, so a stall is still reachable.
-3. It checks the NVMe is present and between 900 GB and 1.1 TB, and **aborts rather than guessing** if not.
-4. It wipes the NVMe, installs Ubuntu Server with a Btrfs root and a 1 GB EFI partition, and reboots.
-5. On first boot a one-shot service rejoins the tailnet and runs `bootstrap.sh`, which installs the
-   Kubuntu desktop and everything else. **60 to 90 minutes of downloads.**
-
-Watch it:
-
-```bash
-ssh alexponce@strix 'sudo tail -f /var/log/firstboot-setup.log'
-```
-
-The 8 TB rescue drive and the 500 GB SATA SSD are never touched by the installer.
+**Leave the other two disks alone.** The 8 TB drive holds the only copy of some of your data.
 
 ---
 
-## 3. First things to do once you are in
+## 2. Hand back to the agent
 
-**Restore your secrets** (SSH key, agent tokens, all your Wi-Fi networks). The passphrase is the one you
-saved; it is also at `/mnt/winrescue/secrets-passphrase.txt`.
+After first boot, open a terminal (Ctrl+Alt+T) and run:
+
+```bash
+sudo apt update && sudo apt install -y curl git
+curl -fsSL https://claude.ai/install.sh | bash
+claude
+```
+
+Log in, then tell it: *"Continue the Linux migration. The plan and scripts are at
+https://github.com/aleponce4/linux-setup and on the rescue drive. Read HANDOFF.md and the repo README,
+then run the bootstrap."*
+
+Or just run it yourself:
+
+```bash
+git clone https://github.com/aleponce4/linux-setup ~/linux-setup
+cd ~/linux-setup
+cp config.env.example config.env
+./bootstrap.sh
+```
+
+That takes 60 to 90 minutes, mostly downloads. It installs the desktop tooling, dev stack, R and the
+science stack, the AI agent CLIs, Docker and Apptainer, Tailscale and the hardened SSH setup, and it sets
+up `/data`, snapshots and backups.
+
+Storage note: with `AUTO_FORMAT="yes"` the storage module formats the **SATA SSD** as `/data` and claims
+the HDD's free space for `/backup`. It will **not** touch `WINRESCUE`, and it refuses to format the disk
+holding the running root. The SSD currently holds only `E:\Linux_migration`, which is mirrored to the
+rescue drive and to GitHub, so losing it costs nothing.
+
+---
+
+## 3. Restore your secrets and data
+
+The rescue drive auto-mounts read-only at `/mnt/winrescue`.
 
 ```bash
 cd ~/linux-setup
-./bootstrap.sh 22          # prompts once for the passphrase
+./bootstrap.sh 22        # SSH key, agent tokens, all your Wi-Fi networks
 ```
 
-**Check the machine came out right.** This prints a pass/fail table of every component:
+It asks for the passphrase you saved. It is also at `/mnt/winrescue/secrets-passphrase.txt`.
 
 ```bash
-cd ~/linux-setup && ./bootstrap.sh 90
-```
-
-**Restore your data** from the rescue drive, which auto-mounts read-only:
-
-```bash
-ls /mnt/winrescue/data      # Desktop Documents LIBS_Data Pictures Downloads Akodon_repo dotfiles
 rsync -avh --info=progress2 /mnt/winrescue/data/LIBS_Data/ /data/libs/
 rsync -avh --info=progress2 /mnt/winrescue/data/Desktop/Onteko/ /data/onteko/
 rsync -avh --info=progress2 /mnt/winrescue/data/Documents/Seed_LIBS_Classification/ /data/seed/Seed_LIBS_Classification/
 rsync -avh /mnt/winrescue/data/Documents/ ~/Documents/ --exclude Seed_LIBS_Classification
 rsync -avh /mnt/winrescue/data/Pictures/  ~/Pictures/
-rsync -avh /mnt/winrescue/data/dotfiles/.claude/projects/ ~/.claude/projects/   # per-project agent memory
-rsync -avh /mnt/winrescue/usb-stick-backup/ /data/libs/ball-horticulture/       # the LIBS spectra off the old stick
+rsync -avh /mnt/winrescue/data/dotfiles/.claude/projects/ ~/.claude/projects/
+rsync -avh /mnt/winrescue/usb-stick-backup/ /data/libs/ball-horticulture/
 ```
 
-**Log in to the things that need a browser:**
+Everything in `data/` was verified by SHA-256 against the originals: 122,649 files, zero mismatches. The
+old WSL is preserved whole at `/mnt/winrescue/wsl/ubuntu-2404.tar` if you need anything from it.
 
-```bash
-sudo tailscale up --ssh --accept-dns   # if it needs re-auth
-gh auth login
-claude                                  # then follow the login
-codex login
-agy                                     # Antigravity
-```
+Then the browser logins: `sudo tailscale up --ssh`, `gh auth login`, `codex login`, `agy`, Chrome, Zoom.
 
-**Get an agent working on the machine.** `claude` is installed and `~/.claude/CLAUDE.md` already describes
-this machine's layout, conventions and rules, so a fresh agent knows where things live and how to change
-them reproducibly. Point it at `~/linux-setup` for anything system-level.
+Verify the result with `./bootstrap.sh 90`, which prints a pass/fail table of every component.
 
 ---
 
-## 4. Housekeeping, do not skip
+## 4. Housekeeping
 
-- **Revoke the Tailscale auth key** at login.tailscale.com > Settings > Keys. It is embedded in the USB
-  stick and sits on the rescue drive, so it should not stay valid.
-- **Change the account password** (`passwd`).
-- **Delete leftover tailnet nodes**: `strix-installer` after the install finishes, and `keycheck-throwaway`
-  if it is still listed.
-- **Wipe the USB stick** when done; it carries the auth key and your password hash.
-- Delete `/mnt/winrescue/secrets-passphrase.txt` once the passphrase is in your password manager.
+- **Revoke the Tailscale auth key** at login.tailscale.com. It sat in plain text on the USB stick.
+- **Change the account password** (`passwd`) — it passed through a chat log.
+- Delete leftover tailnet nodes: `strix-installer`, `keycheck-throwaway`.
+- Delete `/mnt/winrescue/secrets-passphrase.txt` once it is in your password manager.
+- Reclaim the USB stick.
 
 ---
 
-## 5. If it does not come back
+## 5. Your repos
 
-**Nothing is lost in any of these cases.** Your data is on the 8 TB drive, hash-verified (122,649 files,
-zero mismatches), and the plan and scripts are on that drive and on GitHub.
-
-**Case A: neither name appears on the tailnet within 25 minutes.**
-Most likely the firmware ignored the boot entry again and the machine is sitting in Windows, exactly as it
-did on the first attempt. Try Chrome Remote Desktop. If Windows is up, the fix is to press **F8** at the
-ASUS logo when you are physically there and pick the USB entry; the stick is already built and correct.
-
-**Case B: `strix-installer` appears but `strix` never does.**
-The install stalled. You can get into the live installer:
-
-```bash
-ssh root@strix-installer
-tail -f /var/log/installer/subiquity-server-debug.log
-```
-
-**Case C: `strix` appears but the desktop never arrives.**
-The install worked and the bootstrap failed. You have a working machine with SSH; nothing is broken.
-
-```bash
-ssh alexponce@strix
-sudo tail -100 /var/log/firstboot-setup.log
-cd ~/linux-setup && ./bootstrap.sh        # re-run; it is idempotent
-./bootstrap.sh 30                          # or just the desktop module
-```
-
-**Case D: you want Windows back.**
-The Windows system image was skipped at your request, so there is no one-click restore. You would
-reinstall Windows and pull your files from `/mnt/winrescue/data`. The old WSL is preserved as a tarball at
-`/mnt/winrescue/wsl/ubuntu-2404.tar`.
+Four repos had diverged between the Windows machine and GitHub. Their full local history was pushed to a
+branch **`pre-migration-2026-09-02`** on each: `Baby_weight`, `Bell_Seed_project_repo`,
+`lab-bioinfo-templates`, `family-life-plan`. Clone the normal branch and merge from that one when
+convenient. Module 80 clones everything into `~/work`.
 
 ---
 
-## 6. How the setup repo works
+## 6. If something goes wrong
 
-`~/linux-setup` **is** the machine's configuration. Do not hand-install things outside it, or a rebuild
-will not reproduce what you have.
+Nothing here is fatal. Your data is on the 8 TB drive, hash-verified, and this repo is on GitHub.
 
-```
-./bootstrap.sh          # run everything; safe to re-run, skips what is done
-./bootstrap.sh 40 50    # run only those modules
-./bootstrap.sh --list   # list modules
-```
-
-| Module | What it does |
-|---|---|
-| 00 | preflight, hostname, timezone, full upgrade |
-| 10 | core CLI tools, fonts, shell |
-| 20 | Btrfs subvolumes, snapshots, `/data` on the SSD, `/backup` on the HDD |
-| 22 | restore the secrets archive |
-| 25 | Intel Arc drivers, VA-API, compute runtime |
-| 30 | Kubuntu desktop, look and feel, panel, KRunner agent plugin |
-| 40 | VS Code, Docker, Apptainer, Node, uv, micromamba, the AI agent CLIs |
-| 50 | R with r2u binaries, RStudio, Positron, Quarto, science packages |
-| 60 | Tailscale, hardened SSH, firewall, Wake-on-LAN |
-| 70 | dotfiles, git identity, the agent machine guide |
-| 80 | conda envs, clone your repos, distroboxes |
-| 85 | restic backups to the HDD |
-| 90 | verify everything |
-
-To add software: edit the matching file in `lists/`, then re-run that module. Commit the change.
+- **Installer won't boot the stick** — F8 at the ASUS logo and pick the UEFI USB entry by hand. The stick
+  is Ventoy with the stock SHA256-verified ISO.
+- **Bootstrap fails partway** — it is idempotent. Re-run `./bootstrap.sh`, or a single module such as
+  `./bootstrap.sh 50`. Logs are in `~/linux-setup/logs/`.
+- **No network after install** — the Ethernet port only works in one of the two wall sockets; the other
+  has no DHCP server. Wi-Fi is `C Spire 9924`, WPA3, and module 22 restores the saved credentials.
+- **Wrong disk was erased** — stop, do not write anything further, and restore from `/mnt/winrescue`.
 
 ---
 
-## 7. Your repos
+## 7. What is already true
 
-Four repos had diverged between this machine and GitHub. Their full local history was pushed to a branch
-called **`pre-migration-2026-09-02`** on each: `Baby_weight`, `Bell_Seed_project_repo`,
-`lab-bioinfo-templates`, `family-life-plan`. Clone the normal branch and merge or cherry-pick from that one
-when convenient. Module 80 clones everything into `~/work`.
-
----
-
-## 8. Known rough edges
-
-- **Wi-Fi is not configured in the installer**, deliberately: a malformed wireless block can break netplan
-  and take working Ethernet down with it. Add Wi-Fi from the desktop, or module 22 imports your saved
-  networks from the secrets archive.
-- **Snapshots use snapper, not Timeshift.** The automated installer creates a plain Btrfs root without the
-  `@`/`@home` subvolume layout Timeshift's Btrfs mode needs.
-- **The Ethernet port only works in one particular wall socket.** The other one it was in had no DHCP
-  server. If networking is dead, check the cable is in the port that worked.
-- The desktop design rules are in `~/linux-setup/docs/design-system.md`: one font pair, one icon set, one
-  panel, no stacking themes. Worth reading before letting an agent restyle anything.
+- Data copied and hash-verified: 122,649 files, 47.55 GB, zero mismatches.
+- Windows cleaned before the wipe: Steam, games, media-server stack, Docker and WSL removed (C: fell from
+  495 GB to 255 GB). No Windows system image was taken; you chose to skip it.
+- Rescue drive: 2 TB NTFS `WINRESCUE` with your data, WSL export, secrets archive, ISOs and this plan.
+  About 5.5 TB left unallocated for `/backup`.
+- The setup repo is complete and pushed: 14 modules, package lists, dotfiles, the KRunner agent plugin,
+  the design system, and the machine guide that a fresh agent reads on first run.
