@@ -49,7 +49,18 @@ alias ...='cd ../..'
 alias open='xdg-open'
 alias r='radian'
 alias venv='uv venv && source .venv/bin/activate'
-alias snapnow='sudo timeshift --create --comments "manual $(date +%F_%T)"'
+alias backupnow='sudo restic-backup'
+snapnow() {
+  if [[ "$(findmnt -n -o FSTYPE / 2>/dev/null)" != "btrfs" ]]; then
+    printf '%s\n' 'snapnow: root is not Btrfs; use backupnow (restic) on this ext4 system' >&2
+    return 1
+  fi
+  if ! command -v timeshift >/dev/null 2>&1; then
+    printf '%s\n' 'snapnow: Timeshift is not installed' >&2
+    return 1
+  fi
+  sudo timeshift --create --comments "manual $(date +%F_%T)"
+}
 alias reload='exec bash'
 
 # terminal title

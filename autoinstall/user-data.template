@@ -1,5 +1,8 @@
 #cloud-config
-# Ubuntu Server 26.04.1 automated install for "strix".
+# ARCHIVED BTRFS PROTOTYPE — not the installer for the current ext4 system.
+# Its layout and generated UUID do not yet satisfy config/storage.conf or module 20. Do not write or
+# boot an ISO made from this template without first redesigning and validating that future path.
+# Ubuntu Server 26.04.1 automated install prototype for "strix".
 # Placeholders are substituted by build-iso.sh: @@PWHASH@@ @@SSHKEY@@ @@TSKEY@@ @@REPO@@
 # The result is a minimal Ubuntu with SSH and Tailscale up; the first-boot service then runs
 # linux-setup/bootstrap.sh, which installs the Kubuntu desktop and everything else.

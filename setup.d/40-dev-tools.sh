@@ -122,7 +122,7 @@ fi
 if [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]]; then
   write_file_sudo /etc/sudoers.d/90-agent-admin 0440 <<EOF
 # linux-setup: let $TARGET_USER (and the AI agents running as that user) administer packages and services without a password.
-# Every apt run is preceded by a Timeshift snapshot (timeshift-autosnap-apt). Remove this file to require the password again.
+# A future Btrfs root may add pre-apt Timeshift snapshots; the current ext4 root relies on restic backups.
 Cmnd_Alias AGENT_ADMIN = /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/flatpak, /usr/bin/snap, \\
     /usr/bin/systemctl, /usr/bin/journalctl, /usr/bin/timeshift, /usr/bin/btrbk, /usr/bin/tailscale, \\
     /usr/sbin/ufw, /usr/bin/fwupdmgr, /usr/bin/apptainer, /usr/sbin/update-grub, /usr/bin/udevadm

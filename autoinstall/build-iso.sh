@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# build-iso.sh - remaster an Ubuntu Server ISO into a fully unattended installer for this workstation.
+# build-iso.sh - archived Btrfs autoinstall prototype; not the current ext4 installation path.
+# The template does not yet create/verify the storage layout and facts now required by module 20.
 #
 # Runs on Linux (or WSL). Needs: xorriso.
 #   ./build-iso.sh --src <server.iso> --out <auto.iso> --secrets <dir>

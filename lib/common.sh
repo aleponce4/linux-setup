@@ -6,6 +6,7 @@ _COMMON_SH=1
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 LISTS_DIR="$REPO_DIR/lists"
 RUN_LOG="${RUN_LOG:-/dev/null}"
+export LISTS_DIR
 export DEBIAN_FRONTEND=noninteractive
 
 log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" | tee -a "$RUN_LOG" >&2; }
@@ -16,10 +17,107 @@ have() { command -v "$1" >/dev/null 2>&1; }
 load_config() {
   # shellcheck disable=SC1091
   source "$REPO_DIR/config.env"
+  local storage_config="$REPO_DIR/config/storage.conf"
+  [[ -f "$storage_config" ]] || die "missing tracked storage facts: $storage_config"
+  # shellcheck disable=SC1090
+  source "$storage_config"
   TARGET_USER="${TARGET_USER:-$USER}"
   TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
   [[ -n "$TARGET_HOME" ]] || die "user $TARGET_USER does not exist"
   export TARGET_USER TARGET_HOME
+}
+
+# canonical_block_device DEVICE -> resolved /dev path, only when it exists as a block device
+canonical_block_device() {
+  local resolved
+  resolved="$(readlink -f "$1" 2>/dev/null)" || return 1
+  [[ -b "$resolved" ]] || return 1
+  printf '%s\n' "$resolved"
+}
+
+# parent_disk DEVICE -> canonical top-level physical disk for a partition/device.
+# Ambiguous multi-parent stacks are deliberately rejected; this workstation uses direct partitions.
+parent_disk() {
+  local current type depth=0 parents=()
+  current="$(canonical_block_device "$1")" || return 1
+  while (( depth < 8 )); do
+    type="$(lsblk -dnro TYPE "$current" 2>/dev/null | head -n1)"
+    if [[ "$type" == "disk" ]]; then
+      printf '%s\n' "$current"
+      return 0
+    fi
+    mapfile -t parents < <(lsblk -dnro PKNAME "$current" 2>/dev/null | awk 'NF' | sort -u)
+    (( ${#parents[@]} == 1 )) || return 1
+    current="/dev/${parents[0]}"
+    current="$(canonical_block_device "$current")" || return 1
+    depth=$((depth + 1))
+  done
+  return 1
+}
+
+normalized_disk_serial() {
+  local disk
+  disk="$(canonical_block_device "$1")" || return 1
+  lsblk -dnro SERIAL "$disk" 2>/dev/null \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[[:space:]][[:space:]]*/_/g'
+}
+
+# disk_matches ID SERIAL -> exact stable link, physical disk type and normalized serial all agree
+disk_matches() {
+  local disk_id="$1" expected_serial="$2" disk
+  [[ -L "$disk_id" ]] || return 1
+  disk="$(canonical_block_device "$disk_id")" || return 1
+  [[ "$(lsblk -dnro TYPE "$disk" 2>/dev/null | head -n1)" == "disk" ]] || return 1
+  [[ "$(normalized_disk_serial "$disk")" == "$expected_serial" ]]
+}
+
+# mount_matches_disk MOUNTPOINT DISK_ID SERIAL -> mounted source is a child of the exact disk
+mount_matches_disk() {
+  local mountpoint_path="$1" disk_id="$2" expected_serial="$3" source source_disk expected_disk
+  mountpoint -q "$mountpoint_path" || return 1
+  disk_matches "$disk_id" "$expected_serial" || return 1
+  source="$(findmnt -nro SOURCE --target "$mountpoint_path" 2>/dev/null)" || return 1
+  source="${source%%\[*}"
+  source_disk="$(parent_disk "$source")" || return 1
+  expected_disk="$(canonical_block_device "$disk_id")" || return 1
+  [[ "$source_disk" == "$expected_disk" ]]
+}
+
+# mount_matches_filesystem MOUNTPOINT DISK_ID SERIAL UUID -> exact FS on the exact disk
+mount_matches_filesystem() {
+  local mountpoint_path="$1" disk_id="$2" expected_serial="$3" expected_uuid="$4" actual_uuid
+  mount_matches_disk "$mountpoint_path" "$disk_id" "$expected_serial" || return 1
+  actual_uuid="$(findmnt -nro UUID --target "$mountpoint_path" 2>/dev/null)" || return 1
+  [[ -n "$actual_uuid" && "$actual_uuid" == "$expected_uuid" ]]
+}
+
+# mount_matches_btrfs_filesystem MOUNTPOINT DISK_ID SERIAL UUID FSROOT
+# -> exact Btrfs filesystem and exact mounted subvolume/top-level root
+mount_matches_btrfs_filesystem() {
+  local mountpoint_path="$1" disk_id="$2" expected_serial="$3" expected_uuid="$4" expected_fsroot="$5"
+  local actual_fstype actual_fsroot
+  mount_matches_filesystem "$mountpoint_path" "$disk_id" "$expected_serial" "$expected_uuid" || return 1
+  actual_fstype="$(findmnt -nro FSTYPE --target "$mountpoint_path" 2>/dev/null)" || return 1
+  actual_fsroot="$(findmnt -nro FSROOT --target "$mountpoint_path" 2>/dev/null)" || return 1
+  [[ "$actual_fstype" == "btrfs" && "$actual_fsroot" == "$expected_fsroot" ]]
+}
+
+# mount_matches_label MOUNTPOINT DISK_ID SERIAL LABEL -> labeled FS on the exact disk
+mount_matches_label() {
+  local mountpoint_path="$1" disk_id="$2" expected_serial="$3" expected_label="$4" actual_label
+  mount_matches_disk "$mountpoint_path" "$disk_id" "$expected_serial" || return 1
+  actual_label="$(findmnt -nro LABEL --target "$mountpoint_path" 2>/dev/null)" || return 1
+  [[ -n "$actual_label" && "$actual_label" == "$expected_label" ]]
+}
+
+# mount_matches_btrfs_label MOUNTPOINT DISK_ID SERIAL LABEL FSROOT
+mount_matches_btrfs_label() {
+  local mountpoint_path="$1" disk_id="$2" expected_serial="$3" expected_label="$4" expected_fsroot="$5"
+  local actual_fstype actual_fsroot
+  mount_matches_label "$mountpoint_path" "$disk_id" "$expected_serial" "$expected_label" || return 1
+  actual_fstype="$(findmnt -nro FSTYPE --target "$mountpoint_path" 2>/dev/null)" || return 1
+  actual_fsroot="$(findmnt -nro FSROOT --target "$mountpoint_path" 2>/dev/null)" || return 1
+  [[ "$actual_fstype" == "btrfs" && "$actual_fsroot" == "$expected_fsroot" ]]
 }
 
 # read_list FILE -> items, ignoring blanks and '#' comments
@@ -131,4 +229,8 @@ flatpak_install() {
 
 usergroup_add() { id -nG "$TARGET_USER" | tr ' ' '\n' | grep -qx "$1" || sudo usermod -aG "$1" "$TARGET_USER"; }
 
-systemd_enable_now() { systemctl is-enabled --quiet "$1" 2>/dev/null && systemctl is-active --quiet "$1" || sudo systemctl enable --now "$1"; }
+systemd_enable_now() {
+  if ! systemctl is-enabled --quiet "$1" 2>/dev/null || ! systemctl is-active --quiet "$1"; then
+    sudo systemctl enable --now "$1"
+  fi
+}

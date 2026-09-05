@@ -84,6 +84,19 @@ KDE network applet > Add connection > "OpenConnect (Cisco AnyConnect)" > gateway
 
 ## Data restore from the rescue drive
 
+The root filesystem is ext4. `/data` is a separate Samsung 860 SSD and must be an actual mount before any
+restore begins; otherwise these commands would copy large data into the 990 PRO root filesystem. Confirm
+the mount and disk identity first:
+
+```bash
+mountpoint -q /data && findmnt /data
+mountpoint -q /mnt/winrescue && findmnt /mnt/winrescue
+lsblk -o NAME,MODEL,SERIAL,SIZE,FSTYPE,MOUNTPOINTS
+```
+
+Stop if `/data` is not mounted from the Samsung 860 or if `WINRESCUE` is not mounted read-only from the
+HGST drive. Once those checks agree with [storage.md](storage.md):
+
 ```bash
 ls /mnt/winrescue/data            # Desktop Documents LIBS_Data Pictures Downloads Akodon_repo dotfiles
 rsync -avh --info=progress2 /mnt/winrescue/data/LIBS_Data/ /data/libs/
@@ -96,3 +109,26 @@ rsync -avh /mnt/winrescue/data/dotfiles/.claude/projects/ ~/.claude/projects/   
 ```
 
 Old WSL home, if something is missing: `sudo mkdir /srv/wsl && sudo tar -xpf /mnt/winrescue/wsl/ubuntu-2404.tar -C /srv/wsl --numeric-owner`, then browse `/srv/wsl/home/alex_ubuntu`.
+
+## Restoring from restic
+
+On the current ext4 root, restic is the recovery mechanism; there are no root snapshots. Before listing or
+restoring a backup, verify that `/backup` is a real mount from the HGST drive:
+
+```bash
+mountpoint -q /backup && findmnt /backup
+lsblk -o NAME,MODEL,SERIAL,SIZE,FSTYPE,MOUNTPOINTS
+sudo restic -r /backup/restic -p /etc/restic/password snapshots
+```
+
+Restore into a temporary directory first, inspect the result, and then copy only the required files into
+place:
+
+```bash
+sudo restic -r /backup/restic -p /etc/restic/password \
+  restore latest --target /tmp/restic-restore --include /home/alexponce/Documents
+```
+
+For complete root loss, reinstall Kubuntu on the Samsung 990 PRO only, rerun `linux-setup`, and then restore
+the needed files. A future optional Btrfs root may also have Timeshift/GRUB snapshots, but snapshots are not
+backups.

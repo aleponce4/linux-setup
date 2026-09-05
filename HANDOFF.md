@@ -1,9 +1,13 @@
-# Handoff: installing Kubuntu and finishing the setup
+# Handoff: the current Kubuntu install and finishing the setup
 
 The automated-installer route was abandoned on 2026-09-04 after a run of Windows-side failures (a flash
 controller that refused writes, raw sector writes denied, filenames mangled by Windows' 8.3 view, and a
 disk serial Windows reported one character differently from Linux). The reliable path is a normal Kubuntu
 install from a Ventoy stick, then the setup repo does everything else from inside Linux.
+
+That stock installation is now complete. Its root filesystem is ext4; reinstalling merely to convert it to
+Btrfs is unnecessary. The provisioning repo detects the root filesystem and supports this ext4 system as a
+first-class configuration.
 
 This file lives at `https://github.com/aleponce4/linux-setup/blob/main/HANDOFF.md` and on the rescue drive.
 
@@ -11,42 +15,37 @@ This file lives at `https://github.com/aleponce4/linux-setup/blob/main/HANDOFF.m
 |---|---|
 | Login | `alexponce` (lowercase) |
 | Hostname | `strix` |
-| Root disk | **NVMe Samsung 990 PRO**, Btrfs, no encryption. Windows is erased |
-| Data disk | SATA SSD 860 EVO becomes `/data` |
-| Backups | 8 TB HDD: `WINRESCUE` (NTFS, your data) + free space for `/backup` |
+| Root disk | **Samsung 990 PRO 1 TB NVMe**, `/dev/nvme0n1p2`, ext4, UUID `1e0539dd-c9b4-4222-9076-48a11c6154d9` |
+| Data disk | Samsung 860 EVO 500 GB SATA SSD, mounted separately at `/data` when configured |
+| Rescue/backups | 8 TB HGST HDD: `WINRESCUE` plus the separately mounted `/backup` area when configured |
 | Setup repo | `https://github.com/aleponce4/linux-setup` |
 
 ---
 
-## 1. Install Kubuntu
+## 1. Current installation
 
-Boot the Ventoy stick (F8 at the ASUS logo, pick the UEFI USB entry), choose
-`kubuntu-26.04.1-desktop-amd64.iso`, then "Try or Install Kubuntu".
+The machine currently runs the stock Kubuntu 26.04 installation. These read-only checks describe the root
+that the repo expects:
 
-| Screen | Answer |
-|---|---|
-| Language | English |
-| Location | America/Chicago |
-| Keyboard | English (US) |
-| Installation type | **Erase disk** |
-| Target device | **Samsung SSD 990 PRO 1TB** (the NVMe). Do **not** pick the 860 EVO or the 8 TB HGST |
-| Filesystem | **btrfs** |
-| Swap | No swap |
-| Encryption | unchecked |
-| Name / login / computer | `Alex Ponce` / **`alexponce`** / **`strix`** |
-| Log in automatically | yes |
+```bash
+findmnt -no SOURCE,FSTYPE,UUID /
+lsblk -o NAME,MODEL,SERIAL,SIZE,FSTYPE,MOUNTPOINTS
+```
 
-The username and hostname matter: the setup repo, the SSH config and the scripts all reference them.
-Btrfs matters because the snapshot and rollback design depends on it, and Calamares creates the `@` and
-`@home` subvolumes that Timeshift's Btrfs mode needs.
+The expected root is `/dev/nvme0n1p2`, ext4, UUID `1e0539dd-c9b4-4222-9076-48a11c6154d9`, on the Samsung
+990 PRO. The Samsung 860 and HGST disks must never appear as `/`.
 
-**Leave the other two disks alone.** The 8 TB drive holds the only copy of some of your data.
+Btrfs remains an optional layout for a future, deliberate reinstall. On Btrfs, module 20 may additionally
+configure the existing Timeshift, `grub-btrfs`, and `btrbk` workflow. The repo has never used Snapper.
+
+**Leave the other two disks alone. Do not format or repartition them.** The 8 TB drive holds the only copy
+of some of your data.
 
 ---
 
 ## 2. Hand back to the agent
 
-After first boot, open a terminal (Ctrl+Alt+T) and run:
+From the working desktop, open a terminal (Ctrl+Alt+T) and run:
 
 ```bash
 sudo apt update && sudo apt install -y curl git
@@ -69,18 +68,29 @@ cp config.env.example config.env
 
 That takes 60 to 90 minutes, mostly downloads. It installs the desktop tooling, dev stack, R and the
 science stack, the AI agent CLIs, Docker and Apptainer, Tailscale and the hardened SSH setup, and it sets
-up `/data`, snapshots and backups.
+up the existing `/data` and `/backup` mounts plus restic backups. Because the current root is ext4, it does
+not configure root snapshots.
 
-Storage note: with `AUTO_FORMAT="yes"` the storage module formats the **SATA SSD** as `/data` and claims
-the HDD's free space for `/backup`. It will **not** touch `WINRESCUE`, and it refuses to format the disk
-holding the running root. The SSD currently holds only `E:\Linux_migration`, which is mirrored to the
-rescue drive and to GitHub, so losing it costs nothing.
+Storage note: a normal bootstrap run is non-destructive. It must not format or repartition the Samsung 860
+or HGST disks. The `--format` path is only for a future blank replacement disk, requires explicit runtime
+opt-in, displays the exact resolved target and requires an exact typed confirmation. It is not part of the
+current-machine flow. See [docs/storage.md](docs/storage.md).
 
 ---
 
 ## 3. Restore your secrets and data
 
 The rescue drive auto-mounts read-only at `/mnt/winrescue`.
+
+Before restoring anything, verify that `/data` is a real mount from the Samsung 860 rather than an ordinary
+directory on the root filesystem:
+
+```bash
+mountpoint -q /data && findmnt /data
+lsblk -o NAME,MODEL,SERIAL,SIZE,FSTYPE,MOUNTPOINTS
+```
+
+Stop if `/data` is not mounted from the expected SATA SSD.
 
 ```bash
 cd ~/linux-setup
@@ -135,6 +145,10 @@ Nothing here is fatal. Your data is on the 8 TB drive, hash-verified, and this r
   is Ventoy with the stock SHA256-verified ISO.
 - **Bootstrap fails partway** — it is idempotent. Re-run `./bootstrap.sh`, or a single module such as
   `./bootstrap.sh 50`. Logs are in `~/linux-setup/logs/`.
+- **A system change must be undone on ext4** — use a verified restic backup. For complete root loss,
+  reinstall Kubuntu on the Samsung 990 PRO only, rerun the bootstrap, then restore the needed files.
+- **A future Btrfs install must be rolled back** — Timeshift/GRUB snapshots may be used in addition to
+  restic, when that optional snapshot stack was enabled. Snapshots never replace backups.
 - **No network after install** — the Ethernet port only works in one of the two wall sockets; the other
   has no DHCP server. Wi-Fi is `C Spire 9924`, WPA3, and module 22 restores the saved credentials.
 - **Wrong disk was erased** — stop, do not write anything further, and restore from `/mnt/winrescue`.
@@ -147,6 +161,6 @@ Nothing here is fatal. Your data is on the 8 TB drive, hash-verified, and this r
 - Windows cleaned before the wipe: Steam, games, media-server stack, Docker and WSL removed (C: fell from
   495 GB to 255 GB). No Windows system image was taken; you chose to skip it.
 - Rescue drive: 2 TB NTFS `WINRESCUE` with your data, WSL export, secrets archive, ISOs and this plan.
-  About 5.5 TB left unallocated for `/backup`.
+  Any separate `/backup` filesystem must be positively identified and mounted before use.
 - The setup repo is complete and pushed: 14 modules, package lists, dotfiles, the KRunner agent plugin,
   the design system, and the machine guide that a fresh agent reads on first run.

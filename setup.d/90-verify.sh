@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 90-verify.sh - pass/fail table for the whole setup. Never fixes anything.
 set -uo pipefail
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
 export PATH="$HOME/.local/bin:$HOME/.local/share/fnm:$PATH"
 [[ -x "$HOME/.local/share/fnm/fnm" ]] && eval "$("$HOME/.local/share/fnm/fnm" env --shell bash)" 2>/dev/null
@@ -12,20 +13,85 @@ check() {  # check NAME COMMAND...
 }
 ver() { "$@" 2>/dev/null | head -n1 | tr -d '\r' | cut -c1-60; }
 SHELL_WANT="${LOGIN_SHELL:-bash}"
+: "${ROOT_DEVICE:?storage facts must define ROOT_DEVICE}"
+: "${ROOT_FS:?storage facts must define ROOT_FS}"
+: "${ROOT_UUID:?storage facts must define ROOT_UUID}"
+: "${ROOT_DISK_ID:?storage facts must define ROOT_DISK_ID}"
+: "${ROOT_DISK_SERIAL:?storage facts must define ROOT_DISK_SERIAL}"
+: "${DATA_DISK_ID:?storage facts must define DATA_DISK_ID}"
+: "${DATA_DISK_SERIAL:?storage facts must define DATA_DISK_SERIAL}"
+: "${BACKUP_DISK_ID:?storage facts must define BACKUP_DISK_ID}"
+: "${BACKUP_DISK_SERIAL:?storage facts must define BACKUP_DISK_SERIAL}"
+
+root_source_device() {
+  local source
+  source="$(findmnt -nro SOURCE --target / 2>/dev/null)" || return 1
+  source="${source%%\[*}"
+  canonical_block_device "$source"
+}
+
+root_device_matches() {
+  local actual expected
+  actual="$(root_source_device)" || return 1
+  expected="$(canonical_block_device "$ROOT_DEVICE")" || return 1
+  [[ "$actual" == "$expected" ]]
+}
+
+root_not_on_disk() {
+  local disk_id="$1" expected_serial="$2" root_source root_parent expected_disk
+  root_source="$(root_source_device)" || return 1
+  root_parent="$(parent_disk "$root_source")" || return 1
+  disk_matches "$disk_id" "$expected_serial" || return 1
+  expected_disk="$(canonical_block_device "$disk_id")" || return 1
+  [[ "$root_parent" != "$expected_disk" ]]
+}
+
+restic_repository_readable() {
+  [[ -s /etc/restic/password ]] || return 1
+  mount_matches_label "$BACKUP_MOUNT" "$BACKUP_DISK_ID" "$BACKUP_DISK_SERIAL" backup || return 1
+  sudo env RESTIC_REPOSITORY="$BACKUP_MOUNT/restic" RESTIC_PASSWORD_FILE=/etc/restic/password \
+    restic cat config >/dev/null
+}
+
+restic_repository_nonempty() {
+  command -v jq >/dev/null || return 1
+  mount_matches_label "$BACKUP_MOUNT" "$BACKUP_DISK_ID" "$BACKUP_DISK_SERIAL" backup || return 1
+  sudo env RESTIC_REPOSITORY="$BACKUP_MOUNT/restic" RESTIC_PASSWORD_FILE=/etc/restic/password \
+    restic snapshots --json | jq -e 'length > 0' >/dev/null
+}
 
 check "GPU: xe driver bound"                bash -c "lspci -k | grep -A3 -i 'VGA.*Intel' | grep -q 'xe'"
 check "GPU: VA-API (iHD) decode"            bash -c "vainfo 2>/dev/null | grep -q VAEntrypointVLD"
 check "GPU: OpenGL renderer Intel"          bash -c "glxinfo -B 2>/dev/null | grep -qi 'intel'"
 [[ "${ENABLE_INTEL_COMPUTE:-yes}" == "yes" ]] && check "GPU: OpenCL/Level Zero (clinfo)" bash -c "clinfo -l 2>/dev/null | grep -qi intel"
-check "Storage: root is btrfs"               bash -c "[[ \$(findmnt -no FSTYPE /) == btrfs ]]"
-check "Storage: /var/lib/docker on @docker"  bash -c "findmnt -no OPTIONS /var/lib/docker | grep -q subvol=/@docker"
-check "Storage: $DATA_MOUNT mounted"         mountpoint -q "$DATA_MOUNT"
-check "Storage: $BACKUP_MOUNT mounted"       mountpoint -q "$BACKUP_MOUNT"
+check "Storage: root device is $ROOT_DEVICE" root_device_matches
+check "Storage: root filesystem is $ROOT_FS" bash -c "[[ \$(findmnt -n -o FSTYPE /) == \"$ROOT_FS\" ]]"
+check "Storage: root UUID is $ROOT_UUID"     bash -c "[[ \$(findmnt -n -o UUID /) == \"$ROOT_UUID\" ]]"
+check "Storage: root parent is Samsung 990 PRO" mount_matches_disk / "$ROOT_DISK_ID" "$ROOT_DISK_SERIAL"
+check "Storage: Samsung 860 is not root"     root_not_on_disk "$DATA_DISK_ID" "$DATA_DISK_SERIAL"
+check "Storage: HGST backup disk is not root" root_not_on_disk "$BACKUP_DISK_ID" "$BACKUP_DISK_SERIAL"
+check "Storage: $DATA_MOUNT is @data on configured disk" mount_matches_btrfs_label "$DATA_MOUNT" "$DATA_DISK_ID" "$DATA_DISK_SERIAL" data /@data
+check "Storage: $BACKUP_MOUNT is top-level backup on configured disk" mount_matches_btrfs_label "$BACKUP_MOUNT" "$BACKUP_DISK_ID" "$BACKUP_DISK_SERIAL" backup /
+
+ROOT_FSTYPE="$(findmnt -n -o FSTYPE / 2>/dev/null || true)"
+case "$ROOT_FSTYPE" in
+  ext4)
+    check "Storage: Docker uses normal ext4 directory" bash -c "[[ -d /var/lib/docker && \$(findmnt -n -o FSTYPE --target /var/lib/docker) == ext4 ]]"
+    ;;
+  btrfs)
+    check "Storage: /var/lib/docker on @docker" bash -c "findmnt -n -o OPTIONS /var/lib/docker | grep -q subvol=/@docker"
+    [[ "${ENABLE_SNAPSHOTS:-yes}" == "yes" ]] && check "Snapshots: timeshift has snapshots" bash -c "sudo timeshift --list 2>/dev/null | grep -qE '^[0-9]+ +>'"
+    [[ "${ENABLE_SNAPSHOTS:-yes}" == "yes" ]] && check "Snapshots: grub-btrfsd running" systemctl is-active --quiet grub-btrfsd
+    [[ "${ENABLE_BTRBK:-yes}" == "yes" ]] && check "Backup: btrbk timer enabled" systemctl is-enabled --quiet btrbk.timer
+    ;;
+esac
+
 check "Storage: zram swap active"            bash -c "swapon --show | grep -q zram"
-[[ "${ENABLE_SNAPSHOTS:-yes}" == "yes" ]] && check "Snapshots: timeshift has snapshots" bash -c "sudo timeshift --list 2>/dev/null | grep -qE '^[0-9]+ +>'"
-[[ "${ENABLE_SNAPSHOTS:-yes}" == "yes" ]] && check "Snapshots: grub-btrfsd running" systemctl is-active --quiet grub-btrfsd
-[[ "${ENABLE_BTRBK:-yes}" == "yes" ]] && check "Backup: btrbk timer enabled" systemctl is-enabled --quiet btrbk.timer
-[[ "${ENABLE_RESTIC:-yes}" == "yes" ]] && check "Backup: restic timers + repo readable" bash -c "systemctl is-enabled --quiet restic-backup.timer && systemctl is-enabled --quiet restic-check.timer && sudo restic -r $BACKUP_MOUNT/restic -p /etc/restic/password snapshots"
+if [[ "${ENABLE_RESTIC:-yes}" == "yes" ]]; then
+  check "Backup: restic timers enabled" bash -c "systemctl is-enabled --quiet restic-backup.timer && systemctl is-enabled --quiet restic-check.timer"
+  check "Backup: restic repository readable" restic_repository_readable
+  check "Backup: restic has snapshots" restic_repository_nonempty
+fi
 check "Secrets: ssh key present"             test -f "$HOME/.ssh/id_ed25519"
 check "Shell: login shell is $SHELL_WANT"    bash -c "[[ \$(getent passwd $TARGET_USER | cut -d: -f7) == */$SHELL_WANT ]]"
 check "Shell: starship zoxide fzf rg fd bat eza lazygit tmux ghostty" bash -c "for t in starship zoxide fzf rg fd bat eza lazygit tmux ghostty; do command -v \$t >/dev/null || exit 1; done"

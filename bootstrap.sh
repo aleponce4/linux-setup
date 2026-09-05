@@ -6,7 +6,7 @@
 #     ./bootstrap.sh            run everything
 #     ./bootstrap.sh 40 50      run only modules starting with 40 or 50
 #     ./bootstrap.sh --list     list modules
-#     ./bootstrap.sh --format   allow 20-storage.sh to format the SATA SSD / HDD free space (asks unless AUTO_FORMAT=yes in config.env)
+#     ./bootstrap.sh --format 20  explicitly unlock destructive storage setup; each exact disk still requires typed confirmation
 set -euo pipefail
 
 # ---- standalone mode (piped from curl, or copied somewhere without the repo): clone and re-exec ----
@@ -34,19 +34,30 @@ source "$REPO_DIR/lib/common.sh"
 load_config
 
 if [[ "${1:-}" == "--list" ]]; then
-  ls -1 "$REPO_DIR/setup.d"/*.sh | xargs -n1 basename
+  for module_path in "$REPO_DIR"/setup.d/*.sh; do basename "$module_path"; done
   exit 0
 fi
 
-export ALLOW_FORMAT="no"
-[[ "${AUTO_FORMAT:-no}" == "yes" ]] && ALLOW_FORMAT="yes"
+ALLOW_FORMAT="no"
+FORMAT_SCOPE="no"
+FORMAT_FLAGS=0
 filters=()
 for a in "$@"; do
   case "$a" in
-    --format) ALLOW_FORMAT="yes" ;;
-    *) filters+=("$a") ;;
+    --format)
+      ALLOW_FORMAT="yes"
+      FORMAT_FLAGS=$((FORMAT_FLAGS + 1))
+      ;;
+    *)
+      filters+=("$a")
+      if [[ "$a" == "20" ]]; then FORMAT_SCOPE="yes"; fi
+      ;;
   esac
 done
+if [[ "$ALLOW_FORMAT" == "yes" ]] \
+    && { (( FORMAT_FLAGS != 1 )) || [[ "$FORMAT_SCOPE" != "yes" ]] || (( ${#filters[@]} != 1 )); }; then
+  die "destructive mode requires the exact arguments: ./bootstrap.sh --format 20"
+fi
 
 if [[ $EUID -eq 0 ]]; then
   die "Run as your normal user; modules call sudo where needed."
@@ -72,7 +83,11 @@ for mod in "$REPO_DIR/setup.d"/*.sh; do
     [[ "$keep" == "yes" ]] || continue
   fi
   log "===== $name ====="
-  if bash "$mod" 2>&1 | tee -a "$RUN_LOG"; then
+  module_args=()
+  if [[ "$name" == "20-storage.sh" && "$ALLOW_FORMAT" == "yes" ]]; then
+    module_args+=(--format)
+  fi
+  if bash "$mod" "${module_args[@]}" 2>&1 | tee -a "$RUN_LOG"; then
     log "----- $name ok"
   else
     log "----- $name FAILED (continuing; see $RUN_LOG)"

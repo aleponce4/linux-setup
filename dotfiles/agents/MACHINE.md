@@ -9,9 +9,10 @@ classification, R/Shiny apps, bioinformatics pipelines that run on the ISAAC HPC
 
 ## Layout
 - `~/linux-setup/`  the provisioning repo. **The lists in `lists/` and the files in `dotfiles/` are the source of truth for what is installed and configured.**
+- `/`  Samsung 990 PRO `/dev/nvme0n1p2`, ext4, UUID `1e0539dd-c9b4-4222-9076-48a11c6154d9`. This is the current supported layout; Btrfs is optional for a future reinstall.
 - `~/work/<repo>/`  git repositories (clone new ones here). Never store datasets inside repos.
-- `/data/` (also `~/data/`)  the SATA SSD: `libs/`, `onteko/`, `seed/`, `datasets/`, `scratch/`. Large files live here.
-- `/backup/`  the HDD: `btrbk/` (hourly Btrfs snapshots of `/`, `/home`, `/data`), `restic/`. Read-mostly.
+- `/data/` (also `~/data/`)  the Samsung 860 SATA SSD when mounted: `libs/`, `onteko/`, `seed/`, `datasets/`, `scratch/`. Verify the mount before writing large files.
+- `/backup/`  the HGST HDD's backup filesystem when mounted: encrypted restic repository and, on an optional Btrfs layout, possible `btrbk/` data. Verify the mount before every backup or restore.
 - `/mnt/winrescue/`  read-only NTFS image of the old Windows machine (data copy, WSL export). Do not write.
 - `~/micromamba/envs/`  conda envs (conda-forge only). `~/.local/share/uv/`  uv-managed Pythons.
 
@@ -21,8 +22,10 @@ classification, R/Shiny apps, bioinformatics pipelines that run on the ISAAC HPC
 - **System files under /etc**: only through a module using `write_file_sudo`/`ensure_line` from `lib/common.sh`, so the change is versioned.
 - **Commit** every change to `~/linux-setup` with a clear message (`git -C ~/linux-setup commit -am "..."`).
 - `sudo` works without a password for: apt, apt-get, dpkg, flatpak, systemctl, journalctl, timeshift, btrbk, tailscale, ufw, fwupdmgr, apptainer. Anything else prompts Alex.
-- Every `apt` run takes a Timeshift snapshot first (`sudo timeshift --list`). **Before any other system-level change** (config under /etc, GRUB, drivers, desktop settings en masse) run `snapnow` (= `sudo timeshift --create`). Rollback: `sudo timeshift --restore` or boot a snapshot from GRUB.
-- Snapshots are not backups. restic runs daily at 02:30 into `/backup/restic` (`sudo restic-backup` to run now; list with `sudo restic -r /backup/restic -p /etc/restic/password snapshots`; restore with `... restore latest --target /tmp/restore --include <path>`). btrbk keeps hourly Btrfs snapshots of `/`, `/home`, `/data` under `/backup/btrbk`.
+- The current ext4 root has no filesystem snapshots. Before a significant system change, verify `/data` and `/backup`, then run `backupnow` for a restic backup. Recovery is reinstall/bootstrap/restore, not a root rollback.
+- On a future optional Btrfs root, `snapnow` may create a Timeshift snapshot and `grub-btrfs`/`btrbk` may provide additional rollback points when enabled. The helper refuses to run on ext4, and the repo has never used Snapper.
+- Snapshots are not backups. restic runs daily at 02:30 into `/backup/restic` (`backupnow` to run now; list with `sudo restic -r /backup/restic -p /etc/restic/password snapshots`; restore with `... restore latest --target /tmp/restore --include <path>`). Confirm `/backup` is mounted from the HGST disk first.
+- Read `~/linux-setup/docs/storage.md` and the tracked facts in `config/storage.conf` before changing storage configuration. Never identify the SATA SSD or HDD by `/dev/sdX` ordering.
 - Prefer the workstation repo over ad-hoc changes: "modify `~/linux-setup` so the change is reproducible, show the diff, then apply it".
 
 ## Environments
