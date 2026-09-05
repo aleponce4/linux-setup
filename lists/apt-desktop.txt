@@ -14,6 +14,10 @@ sddm
 systemsettings
 dolphin
 
+# --- wallpapers (adds to the ~40 KDE sets already in /usr/share/wallpapers) ---
+plasma-wallpapers-addons
+kubuntu-wallpapers
+
 # --- integration, fonts, theming ---
 flatpak
 plasma-discover-backend-flatpak
