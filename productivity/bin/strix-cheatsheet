@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Open the workstation cheat sheet in a chromeless window (Meta+/ or the launcher entry).
+# Rebuilds the HTML from docs/productivity-cheatsheet.md when the source is newer; stdlib only.
+set -euo pipefail
+REPO_DIR="${LINUX_SETUP_DIR:-$HOME/linux-setup}"
+SOURCE="$REPO_DIR/docs/productivity-cheatsheet.md"
+HTML="$REPO_DIR/output/html/strix-productivity-cheatsheet.html"
+PDF="$REPO_DIR/output/pdf/strix-productivity-cheatsheet.pdf"
+
+if [[ "${1:-}" == "--pdf" ]]; then
+  [[ -f "$PDF" ]] || python3 "$REPO_DIR/scripts/build-productivity-cheatsheet.py" --only pdf >/dev/null
+  exec xdg-open "$PDF"
+fi
+
+if [[ ! -f "$HTML" || "$SOURCE" -nt "$HTML" || "$REPO_DIR/productivity/cheatsheet-template.html" -nt "$HTML" ]]; then
+  python3 "$REPO_DIR/scripts/build-productivity-cheatsheet.py" --only html >/dev/null
+fi
+
+for browser in google-chrome google-chrome-stable chromium; do
+  if command -v "$browser" >/dev/null 2>&1; then
+    exec "$browser" --app="file://$HTML" --window-size=1180,880 --new-window >/dev/null 2>&1 &
+    exit 0
+  fi
+done
+exec xdg-open "$HTML"

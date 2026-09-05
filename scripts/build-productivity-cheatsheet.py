@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Render the Markdown productivity reference as a compact four-page PDF."""
+"""Render the Markdown productivity reference as a four-page PDF and a dark HTML page.
+
+The HTML build needs only the standard library; reportlab is imported lazily for the PDF."""
 
 from __future__ import annotations
 
@@ -9,33 +11,22 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from reportlab.lib.colors import Color, HexColor
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.pdfgen.canvas import Canvas
+import html as html_lib
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "docs" / "productivity-cheatsheet.md"
 DEFAULT_OUTPUT = ROOT / "output" / "pdf" / "strix-productivity-cheatsheet.pdf"
 
-INK = HexColor("#14213D")
-PAPER = HexColor("#F5F7FA")
-CARD = HexColor("#FFFFFF")
-MUTED = HexColor("#607089")
-LINE = HexColor("#DDE4EC")
-TEAL = HexColor("#0B8F87")
-AMBER = HexColor("#E0922E")
-VIOLET = HexColor("#7758B3")
-CORAL = HexColor("#D75A4A")
-BLUE = HexColor("#3478C5")
+DEFAULT_HTML = ROOT / "output" / "html" / "strix-productivity-cheatsheet.html"
 
-STATUS_COLORS = {
-    "READY": TEAL,
-    "FIRST RUN": AMBER,
-    "OPTIONAL": VIOLET,
-    "SAFETY": CORAL,
+STATUS_HEX = {
+    "READY": "#0B8F87",
+    "FIRST RUN": "#E0922E",
+    "OPTIONAL": "#7758B3",
+    "SAFETY": "#D75A4A",
 }
+STATUS_COLORS = STATUS_HEX  # parser validity set; the PDF renderer maps these to reportlab colors
 
 
 @dataclass
@@ -114,6 +105,8 @@ def parse_source(path: Path) -> list[Page]:
 
 
 def wrap(text: str, font: str, size: float, width: float) -> list[str]:
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
     words = text.split()
     if not words:
         return [""]
@@ -143,7 +136,7 @@ def card_height(card: Card, width: float) -> float:
     return height + 6
 
 
-def rounded_badge(canvas: Canvas, x: float, y: float, text: str, color: Color) -> None:
+def rounded_badge(canvas, x: float, y: float, text: str, color) -> None:
     width = stringWidth(text, "Helvetica-Bold", 6.3) + 13
     canvas.setFillColor(color)
     canvas.roundRect(x, y - 1, width, 13, 6.5, fill=1, stroke=0)
@@ -152,7 +145,9 @@ def rounded_badge(canvas: Canvas, x: float, y: float, text: str, color: Color) -
     canvas.drawCentredString(x + width / 2, y + 3.1, text)
 
 
-def draw_card(canvas: Canvas, card: Card, x: float, top: float, width: float) -> float:
+def draw_card(canvas, card: Card, x: float, top: float, width: float) -> float:
+    from reportlab.lib.colors import Color
+
     height = card_height(card, width)
     bottom = top - height
     color = STATUS_COLORS[card.status]
@@ -210,6 +205,20 @@ def draw_card(canvas: Canvas, card: Card, x: float, top: float, width: float) ->
 
 
 def render(pages: list[Page], output: Path) -> None:
+    global INK, PAPER, CARD, MUTED, LINE, TEAL, AMBER, VIOLET, CORAL, BLUE, STATUS_COLORS
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen.canvas import Canvas
+
+    INK = HexColor("#14213D")
+    PAPER = HexColor("#F5F7FA")
+    CARD = HexColor("#FFFFFF")
+    MUTED = HexColor("#607089")
+    LINE = HexColor("#DDE4EC")
+    TEAL, AMBER, VIOLET, CORAL = (HexColor(STATUS_HEX[k]) for k in ("READY", "FIRST RUN", "OPTIONAL", "SAFETY"))
+    BLUE = HexColor("#3478C5")
+    STATUS_COLORS = {k: HexColor(v) for k, v in STATUS_HEX.items()}
+
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas = Canvas(str(output), pagesize=letter)
     canvas.setTitle("Strix Linux Productivity Cheat Sheet")
@@ -264,13 +273,56 @@ def render(pages: list[Page], output: Path) -> None:
     canvas.save()
 
 
+HTML_TEMPLATE = (ROOT / "productivity" / "cheatsheet-template.html").read_text(encoding="utf-8") \
+    if (ROOT / "productivity" / "cheatsheet-template.html").exists() else ""
+
+
+def render_html(pages: list[Page], output: Path) -> None:
+    """Dark single-page reference: one tab per page, filter box, Esc closes the app window."""
+    e = html_lib.escape
+    tabs, panels = [], []
+    for index, page in enumerate(pages):
+        tabs.append(f'<button class="tab" data-tab="{index}" role="tab">{e(page.title.title())}</button>')
+        columns = ["", ""]
+        for card in page.cards:
+            status_class = card.status.lower().replace(" ", "-")
+            items = "".join(
+                f'<li><kbd>{e(item.key)}</kbd><span>{e(item.text)}</span></li>' for item in card.items
+            )
+            notes = "".join(f"<p>{e(note)}</p>" for note in card.notes)
+            columns[card.column] += (
+                f'<section class="card {status_class}"><header><h2>{e(card.title)}</h2>'
+                f'<span class="badge">{e(card.status)}</span></header><ul>{items}</ul>{notes}</section>'
+            )
+        panels.append(
+            f'<div class="panel" data-panel="{index}" role="tabpanel"><p class="subtitle">{e(page.subtitle)}</p>'
+            f'<div class="columns"><div class="col">{columns[0]}</div><div class="col">{columns[1]}</div></div></div>'
+        )
+    if not HTML_TEMPLATE:
+        raise FileNotFoundError("productivity/cheatsheet-template.html is missing")
+    document = (
+        HTML_TEMPLATE.replace("{{TABS}}", "".join(tabs))
+        .replace("{{PANELS}}", "".join(panels))
+        .replace("{{EDITION}}", dt.date.today().isoformat())
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(document, encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="PDF path")
+    parser.add_argument("--html", type=Path, default=DEFAULT_HTML, help="HTML path")
+    parser.add_argument("--only", choices=["pdf", "html"], help="build a single format")
     args = parser.parse_args()
-    render(parse_source(args.source), args.output)
-    print(args.output)
+    pages = parse_source(args.source)
+    if args.only != "pdf":
+        render_html(pages, args.html)
+        print(args.html)
+    if args.only != "html":
+        render(pages, args.output)
+        print(args.output)
 
 
 if __name__ == "__main__":

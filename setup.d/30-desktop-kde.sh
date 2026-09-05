@@ -220,6 +220,8 @@ EOF
     ln -sfn "$REPO_DIR/productivity/applications/strix-cheatsheet.desktop" \
             "$HOME/.local/share/applications/strix-cheatsheet.desktop"
     update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    mkdir -p "$HOME/.local/bin"
+    ln -sfn "$REPO_DIR/productivity/bin/strix-cheatsheet" "$HOME/.local/bin/strix-cheatsheet"
     kwriteconfig6 --file kglobalshortcutsrc --group services \
       --group strix-cheatsheet.desktop --key _launch "Meta+/,none,Strix Cheat Sheet"
   fi

@@ -93,5 +93,5 @@ four-page PDF with the bundled-workspace Python runtime (which provides ReportLa
 python3 scripts/build-productivity-cheatsheet.py
 ```
 
-The generated file is `output/pdf/strix-productivity-cheatsheet.pdf`. The builder fails if a card overflows
+The generated files are `output/html/strix-productivity-cheatsheet.html` (opened by Meta+/ and the launcher entry in a chromeless browser window; `strix-cheatsheet --pdf` opens the print version) and `output/pdf/strix-productivity-cheatsheet.pdf`. The builder fails if a card overflows
 its page so a content edit cannot silently produce a clipped reference sheet.

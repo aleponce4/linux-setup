@@ -205,6 +205,7 @@ install_handlers() {
   apt_install wl-clipboard tesseract-ocr tesseract-ocr-eng libnotify-bin kdialog
   link_repo_file "$PRODUCTIVITY_DIR/bin/ai-clipboard" "$HOME/.local/bin/ai-clipboard"
   link_repo_file "$PRODUCTIVITY_DIR/bin/run-notify" "$HOME/.local/bin/run-notify"
+  link_repo_file "$PRODUCTIVITY_DIR/bin/strix-cheatsheet" "$HOME/.local/bin/strix-cheatsheet"
   install_desktop_actions
   log "handlers ready. AI actions always show a consent dialog before transmitting clipboard text."
   log "Try: copy text, press Meta, then search for 'AI Clipboard'."
