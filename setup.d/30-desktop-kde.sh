@@ -49,13 +49,17 @@ fi
 
 # ---- dictation backend: ydotool daemon as a user service ----
 if [[ "${ENABLE_DICTATION:-yes}" == "yes" ]]; then
-  usergroup_add input
-  write_file_sudo /etc/udev/rules.d/80-uinput.rules 0644 <<'EOF'
+  productivity_override="$HOME/.config/systemd/user/ydotool.service.d/productivity.conf"
+  if [[ -e "$productivity_override" || -L "$productivity_override" ]]; then
+    log "optional productivity phase owns the dictation bridge; leaving its packaged ydotool.service and socket unchanged"
+  else
+    usergroup_add input
+    write_file_sudo /etc/udev/rules.d/80-uinput.rules 0644 <<'EOF'
 KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
 EOF
-  sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=uinput || true
-  mkdir -p "$HOME/.config/systemd/user"
-  cat >"$HOME/.config/systemd/user/ydotoold.service" <<'EOF'
+    sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=uinput || true
+    mkdir -p "$HOME/.config/systemd/user"
+    cat >"$HOME/.config/systemd/user/ydotoold.service" <<'EOF'
 [Unit]
 Description=ydotool daemon (virtual input for dictation)
 [Service]
@@ -64,9 +68,10 @@ Restart=on-failure
 [Install]
 WantedBy=default.target
 EOF
-  systemctl --user daemon-reload 2>/dev/null || true
-  systemctl --user enable --now ydotoold.service 2>/dev/null || warn "ydotoold user service not started (starts at next login)"
-  flatpak override --user --socket=session-bus --env=YDOTOOL_SOCKET="/run/user/$(id -u)/.ydotool_socket" net.mkiol.SpeechNote 2>/dev/null || true
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable --now ydotoold.service 2>/dev/null || warn "ydotoold user service not started (starts at next login)"
+    flatpak override --user --socket=session-bus --env=YDOTOOL_SOCKET="/run/user/$(id -u)/.ydotool_socket" net.mkiol.SpeechNote 2>/dev/null || true
+  fi
 fi
 
 # ---- default apps ----

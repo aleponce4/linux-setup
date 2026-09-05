@@ -16,7 +16,7 @@ Log out and back in once after the first run (fonts, icons, docker group, Meta k
 | Chrome | sign in; sync restores extensions and bookmarks. Install PWAs from the address-bar icon for Teams, Outlook, WhatsApp, Dropbox, OneDrive. |
 | Zoom | SSO/Google login. |
 | Spotify | Flatpak, log in. |
-| Speech Note | first launch: download a Whisper model (medium.en, or Parakeet), enable "Insert into active window" (ydotool is already running), then System Settings > Shortcuts > add a global shortcut for "Speech Note: listen". |
+| Speech Note | Run `./productivity.sh install dictation`, log out/in, then `./productivity.sh doctor dictation`. In Speech Note choose a Whisper.cpp English model (Small first, Medium for more accuracy), enable global shortcuts and "Insert into active window", and test in an empty Kate document. Use clipboard mode if active-window insertion is unreliable. |
 
 ## The launcher (KRunner) and what the agent plugin adds
 

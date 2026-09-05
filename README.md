@@ -19,6 +19,22 @@ cp config.env.example config.env   # edit if the defaults are wrong
 ./bootstrap.sh --list              # show modules
 ```
 
+After the base workstation passes verification, optional productivity experiments live in a completely
+separate, explicit phase. It is never called by `bootstrap.sh`, has no install-all action, and never touches
+storage:
+
+```bash
+./productivity.sh list
+./productivity.sh doctor                              # read-only
+./productivity.sh install handlers --dry-run          # AI clipboard/OCR/job-alert preview
+./productivity.sh install dictation                   # Speech Note Wayland repair
+./productivity.sh install research                    # Zotero + staged Better BibTeX
+./productivity.sh install kando                       # optional pie launcher
+```
+
+See [productivity/README.md](productivity/README.md) for the safety model and first-run steps.
+The printable reference is [output/pdf/strix-productivity-cheatsheet.pdf](output/pdf/strix-productivity-cheatsheet.pdf).
+
 Do not use `--format` on the current workstation. It is an exceptional runtime opt-in for a deliberately
 selected blank replacement disk; storage code must display the resolved device and require an exact typed
 confirmation before doing anything destructive.
@@ -58,6 +74,9 @@ dotfiles/
 docs/manual-steps.md  logins, KDE shortcut tweaks, VPN, data restore
 docs/storage.md       current ext4 layout, optional Btrfs behavior, disk safety and recovery
 autoinstall/          archived Btrfs installer prototype; not supported for the current ext4 machine
+productivity.sh       separate opt-in dispatcher; no default or install-all action
+productivity/         dictation repair, safe AI/OCR handlers, research tools, experiments and doctor
+output/pdf/            generated Strix productivity cheat sheet
 ```
 
 ## Rules for agents editing this repo

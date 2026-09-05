@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# run-notify - run a command normally and send a desktop notification when it exits.
+set -uo pipefail
+
+title="Command finished"
+if [[ "${1:-}" == "--title" ]]; then
+  [[ -n "${2:-}" ]] || { printf 'Usage: run-notify [--title TEXT] -- command [args...]\n' >&2; exit 2; }
+  title="$2"
+  shift 2
+fi
+[[ "${1:-}" == "--" ]] && shift
+(($#)) || { printf 'Usage: run-notify [--title TEXT] -- command [args...]\n' >&2; exit 2; }
+
+started="$(date +%s)"
+"$@"
+status=$?
+ended="$(date +%s)"
+elapsed=$((ended - started))
+
+if command -v notify-send >/dev/null 2>&1; then
+  if ((status == 0)); then
+    notify-send --urgency=normal "$title" "Success after ${elapsed}s: $1"
+  else
+    notify-send --urgency=critical "$title" "Failed (exit ${status}) after ${elapsed}s: $1"
+  fi
+fi
+exit "$status"

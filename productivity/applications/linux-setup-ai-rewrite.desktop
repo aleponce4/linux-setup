@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AI Clipboard - Rewrite Clearly
+Comment=Review and rewrite copied text; result is copied, never pasted
+Exec=/bin/sh -lc "$HOME/.local/bin/ai-clipboard rewrite"
+Icon=accessories-text-editor
+Terminal=false
+Categories=Utility;
+Keywords=AI;clipboard;rewrite;
+X-Linux-Setup-Owner=productivity

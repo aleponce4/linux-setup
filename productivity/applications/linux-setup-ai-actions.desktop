@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AI Clipboard - Extract Actions
+Comment=Review copied text and turn it into a checklist
+Exec=/bin/sh -lc "$HOME/.local/bin/ai-clipboard actions"
+Icon=view-task
+Terminal=false
+Categories=Utility;
+Keywords=AI;clipboard;tasks;actions;
+X-Linux-Setup-Owner=productivity

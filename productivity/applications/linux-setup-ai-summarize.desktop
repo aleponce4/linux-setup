@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AI Clipboard - Summarize
+Comment=Review and summarize copied text; result is copied, never pasted
+Exec=/bin/sh -lc "$HOME/.local/bin/ai-clipboard summarize"
+Icon=edit-copy
+Terminal=false
+Categories=Utility;
+Keywords=AI;clipboard;summarize;
+X-Linux-Setup-Owner=productivity

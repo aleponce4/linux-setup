@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AI Clipboard - Explain
+Comment=Review and explain copied text or an error
+Exec=/bin/sh -lc "$HOME/.local/bin/ai-clipboard explain"
+Icon=help-hint
+Terminal=false
+Categories=Utility;
+Keywords=AI;clipboard;explain;error;
+X-Linux-Setup-Owner=productivity

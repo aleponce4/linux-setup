@@ -134,6 +134,18 @@ Then the browser logins: `sudo tailscale up --ssh`, `gh auth login`, `codex logi
 
 Verify the result with `./bootstrap.sh 90`, which prints a pass/fail table of every component.
 
+Only after the base setup passes, inspect the separate productivity phase. It is never run by the bootstrap,
+has no install-all action, and does not touch storage:
+
+```bash
+./productivity.sh list
+./productivity.sh doctor
+./productivity.sh install handlers --dry-run
+```
+
+Opt into `handlers`, `dictation`, `research`, or `kando` one at a time. The printable learning guide is
+[`output/pdf/strix-productivity-cheatsheet.pdf`](output/pdf/strix-productivity-cheatsheet.pdf).
+
 ---
 
 ## 4. Housekeeping

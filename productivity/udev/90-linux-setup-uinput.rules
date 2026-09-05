@@ -1,0 +1,2 @@
+# Limit synthetic input access to the dedicated uinput group used by dictation.
+KERNEL=="uinput", GROUP="uinput", MODE="0660", OPTIONS+="static_node=uinput"
