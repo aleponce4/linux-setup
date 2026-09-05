@@ -27,15 +27,52 @@ else
   warn "micromamba missing; run module 40 first"
 fi
 
-# ---- git repos into $WORK_DIR ----
+# ---- git repos into $WORK_DIR, in per-context subdirectories ----
 mkdir -p "$WORK_DIR"
 if have gh && gh auth status >/dev/null 2>&1; then gh auth setup-git >/dev/null 2>&1 || true; fi
-while read -r repo; do
+
+# clone_repo OWNER/REPO [SUBDIR] -> $WORK_DIR/[SUBDIR/]REPO, skipping anything already cloned
+clone_repo() {
+  local repo="$1" subdir="${2:-}" name dest url
   name="${repo##*/}"; name="${name%.git}"
-  dest="$WORK_DIR/$name"
-  [[ -d "$dest/.git" ]] && continue
+  dest="$WORK_DIR/${subdir:+$subdir/}$name"
+  [[ -d "$dest/.git" ]] && return 0
+  # A repo that was cloned flat by an earlier run gets moved rather than cloned twice.
+  if [[ -n "$subdir" && -d "$WORK_DIR/$name/.git" ]]; then
+    mkdir -p "$(dirname "$dest")"
+    mv "$WORK_DIR/$name" "$dest" && { log "moved $name -> $subdir/"; return 0; }
+  fi
   url="$repo"; [[ "$repo" =~ ^https?:// ]] || url="https://github.com/$repo.git"
-  git clone -q "$url" "$dest" 2>/dev/null && log "cloned $repo" || warn "clone failed (private? run 'gh auth login' then re-run 80): $repo"
+  mkdir -p "$(dirname "$dest")"
+  if git clone -q "$url" "$dest" 2>/dev/null; then
+    log "cloned $repo -> ${subdir:+$subdir/}$name"
+  else
+    warn "clone failed (private? run 'gh auth login' then re-run 80): $repo"
+  fi
+}
+
+# Every repo in the configured orgs. Requires gh auth; skipped cleanly without it.
+if [[ -n "${GITHUB_ORGS_CLONE_ALL:-}" ]]; then
+  if have gh && gh auth status >/dev/null 2>&1; then
+    for org in $GITHUB_ORGS_CLONE_ALL; do
+      org_dir="$(printf '%s' "$org" | tr '[:upper:]' '[:lower:]')"
+      mapfile -t org_repos < <(gh repo list "$org" --limit 200 --json nameWithOwner \
+                                 -q '.[].nameWithOwner' 2>/dev/null)
+      if ((${#org_repos[@]})); then
+        log "org $org: ${#org_repos[@]} repos -> $WORK_DIR/$org_dir/"
+        for r in "${org_repos[@]}"; do [[ -n "$r" ]] && clone_repo "$r" "$org_dir"; done
+      else
+        warn "could not list repos for org '$org' (no access, or the org is empty)"
+      fi
+    done
+  else
+    warn "GITHUB_ORGS_CLONE_ALL is set but gh is not authenticated; run 'gh auth login' then re-run 80"
+  fi
+fi
+
+# Explicit entries: "<owner/repo> [subdir]"
+while read -r repo subdir; do
+  [[ -n "$repo" ]] && clone_repo "$repo" "$subdir"
 done < <(read_list "$LISTS_DIR/git-repos.txt")
 
 # ---- distrobox: other distros' userlands sharing $HOME (Docker backend; 'sg docker' works before the group is active) ----

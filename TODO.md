@@ -12,53 +12,45 @@ Two separate work contexts, and they should not be mixed in `~/work`:
 | **UTHSC** | the main job | **not needed for now** — defer |
 | personal / tools | everything else | as needed |
 
-### Action items
+### Decided 2026-09-04
 
-1. **`gh auth login` must happen before any of this.** Most of these repos are private;
-   `80-envs.sh` clones with plain `git clone` and will fail silently-ish (it warns and
-   continues) on anything private until `gh auth setup-git` has run.
+- **Org bulk-clone: implemented.** `config.env` now has `GITHUB_ORGS_CLONE_ALL="Onteko"`.
+  `80-envs.sh` expands it with `gh repo list <org> --limit 200` and clones every repo into
+  `$WORK_DIR/onteko/`. Skips cleanly with a warning if `gh` is not authenticated.
+- **Layout: per-context subdirectories.** `lists/git-repos.txt` now takes an optional second
+  field naming a subdirectory under `$WORK_DIR`. `clone_repo()` also *moves* a repo that an
+  earlier flat run already cloned, rather than cloning it twice.
 
-2. **"All Onteko repos" is not what module 80 does today.** `lists/git-repos.txt` is a
-   *static list* and currently names exactly one Onteko repo (`Onteko/ProLIBSpector`).
-   To actually clone the whole org, module 80 needs something like:
+  ```
+  ~/work/onteko/     every Onteko org repo (automatic)
+  ~/work/uthsc/      deferred
+  ~/work/personal/   baby-weight-tracker, family-life-plan
+  ~/work/tools/      cvat
+  ```
 
-   ```sh
-   gh repo list Onteko --limit 200 --json nameWithOwner -q '.[].nameWithOwner'
-   ```
+### Still open: classify the remaining repos
 
-   Proposal: add a `GITHUB_ORGS_CLONE_ALL="Onteko"` switch to `config.env` and have
-   `80-envs.sh` expand it at runtime, keeping the static list for one-off repos.
-   Not implemented yet — needs a decision.
+`gh auth login` is required before any of this runs — most are private.
 
-3. **`lists/git-repos.txt` needs classifying.** The `aleponce4/*` entries are a mix and
-   it is not obvious from the names which belong to UTHSC and which to Onteko:
+These sit directly in `$WORK_DIR` because I cannot tell from the names whether they are
+Onteko or UTHSC work. Add the right subdirectory as a second field in `git-repos.txt`:
 
-   ```
-   aleponce4/libs-spectroscopy-workbench          ?
-   Onteko/ProLIBSpector                           Onteko
-   aleponce4/Seed_LIBS_Classification             ?
-   aleponce4/Bell_Seed_project                    ?
-   aleponce4/lab-bioinfo-templates                ?
-   aleponce4/preclinical-study-analysis-shiny     ?
-   aleponce4/Survival_Shinny_App                  ?
-   aleponce4/veeev-nat-hist-nfcore-isaac          ? (ISAAC = UTHSC HPC, likely UTHSC)
-   aleponce4/akodon-genome-assembly-workflow      ?
-   aleponce4/baby-weight-tracker                  personal
-   eponce00/family-life-plan                      personal
-   cvat-ai/cvat                                   third-party tool
-   ```
+```
+aleponce4/libs-spectroscopy-workbench       ?
+aleponce4/Seed_LIBS_Classification          ?
+aleponce4/Bell_Seed_project                 ?
+aleponce4/lab-bioinfo-templates             ?
+aleponce4/preclinical-study-analysis-shiny  ?
+aleponce4/Survival_Shinny_App               ?
+aleponce4/akodon-genome-assembly-workflow   ?
+```
 
-4. **Proposed `~/work` layout** once classified:
+`aleponce4/veeev-nat-hist-nfcore-isaac` is commented out as UTHSC (ISAAC is the UTHSC HPC);
+uncomment it when UTHSC work is wanted.
 
-   ```
-   ~/work/onteko/     all Onteko org repos
-   ~/work/uthsc/      deferred
-   ~/work/personal/
-   ~/work/tools/      cvat and other third-party checkouts
-   ```
-
-   `80-envs.sh` currently flattens everything into `$WORK_DIR/<repo-name>`. Supporting
-   subdirectories means a small change to its clone loop.
+Note: four repos have a `pre-migration-2026-09-02` branch holding local history that had
+diverged from GitHub (`Baby_weight`, `Bell_Seed_project_repo`, `lab-bioinfo-templates`,
+`family-life-plan`) — merge from it when convenient.
 
 ## Other open items
 
@@ -69,12 +61,25 @@ Two separate work contexts, and they should not be mixed in `~/work`:
 - **Wallpaper not chosen.** ~40 KDE wallpapers already at `/usr/share/wallpapers/`;
   `plasma-wallpapers-addons` and `kubuntu-wallpapers` add more. Set `WALLPAPER` in
   `config.env` and re-run `./bootstrap.sh 30`.
-- **Wispr Flow** — no Linux client is known to exist. `net.mkiol.SpeechNote` is already
-  installed and wired to `ydotool` for insert-into-active-window, which is the same
-  workflow. Needs confirming.
-- **PDF handler is Chrome** now that Okular is removed. `sudo apt install okular` if you
-  want annotation; module 30 picks it back up automatically.
-- **No media player installed** (VLC removed). `sudo apt install mpv` if wanted.
+- **Wispr Flow** — confirmed 2026-09-04: **no official Linux client.** wisprflow.ai/downloads
+  ships Mac and Windows only and has a "vote for Linux support" section.
+
+  Three options, in order of how much trust each requires:
+
+  1. **Speech Note** (`net.mkiol.SpeechNote`) — already installed by module 30 and wired to
+     `ydotool` + a udev rule + a flatpak override, so it can insert text into the active
+     window. Local Whisper models, nothing leaves the machine. This is the same workflow;
+     it is the recommended default. First launch: download a model (medium.en or Parakeet),
+     enable "Insert into active window", bind a global shortcut.
+  2. **Unofficial Linux port** — `github.com/wispr-flow-linux/wispr-flow-linux` repackages
+     the proprietary Windows installer and pairs it with a clean-room Rust helper, producing
+     .deb / .rpm / AppImage / AUR / Nix builds. Deliberately NOT installed: it is an
+     unofficial repackage of closed-source software on a machine that will hold UTHSC data.
+     Your call.
+  3. **Wait for the official client** and vote on their downloads page.
+- ~~PDF handler / media player~~ **resolved 2026-09-04**: `okular` (+ backends) and `mpv`
+  are back in `lists/apt-desktop.txt`; module 30 installs them and sets Okular as the PDF
+  handler. VLC stays out — mpv covers it without the GUI weight.
 - **Remove the temporary sudo file** when setup is finished:
   `sudo rm /etc/sudoers.d/99-claude-setup-TEMPORARY`
   (module 40 installs the properly scoped `/etc/sudoers.d/90-agent-admin` to replace it)

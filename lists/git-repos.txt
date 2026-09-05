@@ -1,13 +1,28 @@
-# owner/repo (GitHub) or full URL; cloned into $WORK_DIR by setup.d/80-envs.sh (private ones need 'gh auth login' first)
+# One repo per line:  <owner/repo or full URL>  [subdirectory under $WORK_DIR]
+# Cloned by setup.d/80-envs.sh. Private repos need `gh auth login` first.
+#
+# Every repo in the orgs named by GITHUB_ORGS_CLONE_ALL (config.env) is cloned automatically
+# into $WORK_DIR/<org lowercased>/ and does not need listing here.
+#
+# Work is split between Onteko (the startup) and UTHSC (the main job). UTHSC repos are
+# deferred for now. Entries with no subdirectory land directly in $WORK_DIR and still need
+# classifying -- see TODO.md.
+
+Onteko/ProLIBSpector                            onteko
+
+aleponce4/baby-weight-tracker                   personal
+eponce00/family-life-plan                       personal
+
+cvat-ai/cvat                                    tools
+
+# --- unclassified: Onteko or UTHSC? (see TODO.md) ---
 aleponce4/libs-spectroscopy-workbench
-Onteko/ProLIBSpector
 aleponce4/Seed_LIBS_Classification
 aleponce4/Bell_Seed_project
 aleponce4/lab-bioinfo-templates
 aleponce4/preclinical-study-analysis-shiny
 aleponce4/Survival_Shinny_App
-aleponce4/veeev-nat-hist-nfcore-isaac
 aleponce4/akodon-genome-assembly-workflow
-aleponce4/baby-weight-tracker
-eponce00/family-life-plan
-cvat-ai/cvat
+
+# --- UTHSC (deferred; ISAAC is the UTHSC HPC) ---
+# aleponce4/veeev-nat-hist-nfcore-isaac         uthsc

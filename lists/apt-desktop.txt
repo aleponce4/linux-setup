@@ -28,6 +28,9 @@ ydotool
 ksshaskpass
 
 # --- utilities kept ---
+okular
+okular-extra-backends
+mpv
 filelight
 spectacle
 kdeconnect
@@ -39,10 +42,8 @@ cameractrls
 
 # --- deliberately removed (lean setup, 2026-09-04) ---
 # kubuntu-desktop        metapackage; drags the whole default app set back in
-# okular                 PDF: Chrome handles it; re-add if you want annotation support
-# okular-extra-backends
 # kate                   VS Code covers editing
 # kolourpaint            no raster editing needed
 # inkscape               no vector editing needed
-# vlc                    no media player installed; 'sudo apt install mpv' if you want one
+# vlc                    replaced by mpv (leaner; no heavy GUI framework)
 # kwalletmanager         GUI only; the KWallet daemon itself stays (Chrome/Wi-Fi/SSH passphrases)

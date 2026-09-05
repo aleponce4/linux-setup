@@ -16,7 +16,7 @@ done
 if [[ -z "$SEC" || ! -f "$SEC" ]]; then log "no secrets.7z under /mnt/winrescue; nothing to restore"; exit 0; fi
 log "using secrets archive: $SEC"
 if [[ -f "$HOME/.ssh/id_ed25519" && -f "$HOME/.claude/.credentials.json" ]]; then log "secrets already restored"; exit 0; fi
-apt_install p7zip-full
+apt_install 7zip   # p7zip-full was renamed to 7zip in Ubuntu 24.04+
 
 read -r -s -p "Passphrase for $SEC (Enter to skip): " pw; echo
 [[ -n "$pw" ]] || { warn "skipped secrets restore; re-run ./bootstrap.sh 22 later"; exit 0; }

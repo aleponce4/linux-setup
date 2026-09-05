@@ -9,7 +9,7 @@ software-properties-common
 apt-transport-https
 unzip
 zip
-p7zip-full
+7zip
 tree
 dos2unix
 jq

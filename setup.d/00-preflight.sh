@@ -21,6 +21,15 @@ ensure_line /etc/hosts "127.0.1.1 $HOSTNAME_TARGET" "^127\.0\.1\.1[[:space:]]+$H
 for comp in universe multiverse restricted; do
   grep -rqs "$comp" /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list 2>/dev/null || sudo add-apt-repository -y "$comp" >/dev/null
 done
+# This host advertises IPv6 but has no default route, so apt tries the v6 mirror addresses
+# first and every fetch fails with "Network is unreachable". Pin apt to IPv4.
+if ! ip -6 route show default 2>/dev/null | grep -q .; then
+  write_file_sudo /etc/apt/apt.conf.d/99force-ipv4 0644 <<'IPV4'
+Acquire::ForceIPv4 "true";
+IPV4
+  log "no IPv6 default route; pinned apt to IPv4"
+fi
+
 echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
 apt_update_once
 log "full-upgrade (first run can take a while)"
