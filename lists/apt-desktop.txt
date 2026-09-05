@@ -36,13 +36,12 @@ okular
 okular-extra-backends
 mpv
 filelight
-spectacle
+kde-spectacle
 kdeconnect
 krdp
-kdeplasma-addons
+kdeplasma-addons-data
 network-manager-openconnect
 openconnect
-cameractrls
 
 # --- deliberately removed (lean setup, 2026-09-04) ---
 # kubuntu-desktop        metapackage; drags the whole default app set back in
@@ -51,3 +50,8 @@ cameractrls
 # inkscape               no vector editing needed
 # vlc                    replaced by mpv (leaner; no heavy GUI framework)
 # kwalletmanager         GUI only; the KWallet daemon itself stays (Chrome/Wi-Fi/SSH passphrases)
+#
+# Renamed / absent on 26.04 (were silently failing every run):
+#   spectacle        -> kde-spectacle
+#   kdeplasma-addons -> only kdeplasma-addons-data exists
+#   cameractrls      -> not packaged for Ubuntu; flatpak hu.irl.cameractrls if wanted

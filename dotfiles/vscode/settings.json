@@ -1,8 +1,7 @@
 {
     "workbench.colorTheme": "Visual Studio Dark",
     "window.autoDetectColorScheme": true,
-    "workbench.preferredDarkColorTheme": "Visual Studio Dark",
-    "workbench.preferredLightColorTheme": "Default Light Modern",
+    "workbench.preferredLightColorTheme": "Light Modern",
     "security.workspace.trust.untrustedFiles": "open",
     "notebook.output.textLineLimit": 50,
     "workbench.settings.applyToAllProfiles": ["notebook.output.textLineLimit"],
@@ -42,5 +41,8 @@
     "github.copilot.chat.codesearch.enabled": true,
     "github.copilot.chat.agent.thinkingTool": true,
     "inlineChat.notebookAgent": true,
-    "files.associations": { "renv.lock": "json" }
+    "files.associations": {
+        "renv.lock": "json"
+    },
+    "editor.fontSize": 16
 }

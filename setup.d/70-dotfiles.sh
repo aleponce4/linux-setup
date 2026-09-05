@@ -36,23 +36,20 @@ have gh && gh auth status >/dev/null 2>&1 && gh auth setup-git >/dev/null 2>&1 |
 mkdir -p "$WORK_DIR" "$HOME/.local/bin"
 [[ -d "$DATA_MOUNT" && ! -e "$HOME/data" ]] && ln -sfn "$DATA_MOUNT" "$HOME/data"
 
-# ssh-agent as a user service, keys unlocked through KDE's askpass (KWallet remembers passphrases)
-mkdir -p "$HOME/.config/systemd/user" "$HOME/.config/environment.d"
-cat >"$HOME/.config/systemd/user/ssh-agent.service" <<'EOF'
-[Unit]
-Description=SSH key agent
-[Service]
-Type=simple
-Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
-ExecStart=/usr/bin/ssh-agent -D -a $SSH_AUTH_SOCK
-[Install]
-WantedBy=default.target
-EOF
+# ssh-agent: use the socket-activated agent systemd already ships. Ubuntu's
+# ssh-agent.socket listens on %t/openssh_agent and exports SSH_AUTH_SOCK pointing at it.
+# Writing our own ~/.config/systemd/user/ssh-agent.service SHADOWS the stock service and
+# binds the agent to a different path, so the socket advertises one address while the agent
+# answers on another: every ssh call then blocks forever on a socket nobody is serving.
+# Only the askpass wiring is ours; KDE's ksshaskpass unlocks passphrases through KWallet.
+mkdir -p "$HOME/.config/environment.d"
+rm -f "$HOME/.config/systemd/user/ssh-agent.service"   # remove the old shadowing unit
 cat >"$HOME/.config/environment.d/10-ssh-agent.conf" <<'EOF'
-SSH_AUTH_SOCK=${XDG_RUNTIME_DIR}/ssh-agent.socket
 SSH_ASKPASS=/usr/bin/ksshaskpass
 SSH_ASKPASS_REQUIRE=prefer
 EOF
+systemctl --user enable --now ssh-agent.socket 2>/dev/null || warn "ssh-agent.socket unavailable"
+
 systemctl --user daemon-reload 2>/dev/null || true
 systemctl --user enable --now ssh-agent.service 2>/dev/null || warn "ssh-agent user service starts at next login"
 
