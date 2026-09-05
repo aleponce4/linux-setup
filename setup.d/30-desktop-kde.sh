@@ -135,8 +135,8 @@ if have kwriteconfig6; then
     if [[ -n "$id1" && -n "$id2" && -n "$id3" && -n "$id4" ]]; then
       cat >"$HOME/.config/kwinrulesrc" <<EOF
 [General]
-count=7
-rules=ls-vertical-dock,ls-side-panel,ls-spotify-vertical,ls-code,ls-web,ls-science,ls-comm
+count=6
+rules=ls-vertical-dock,ls-spotify-vertical,ls-code,ls-web,ls-science,ls-comm
 
 [ls-code]
 Description=linux-setup: editors and terminals on CODE
@@ -160,21 +160,6 @@ screenrule=2
 desktops=
 desktopsrule=2
 position=0,960
-positionrule=2
-size=1080,960
-sizerule=2
-
-[ls-side-panel]
-Description=linux-setup: pinned reference site, top of the vertical screen, CODE only
-wmclass=chrome-${SIDE_PANEL_HOST}__-Default
-wmclassmatch=2
-wmclasscomplete=false
-types=1
-screen=0
-screenrule=2
-desktops=$id1
-desktopsrule=2
-position=0,0
 positionrule=2
 size=1080,960
 sizerule=2
@@ -229,11 +214,14 @@ types=1
 EOF
       # The dock terminal is identified by its title, so it must actually be launched
       # with one. Autostart it; the ls-vertical-dock rule places it from birth.
-      if [[ -n "${SIDE_PANEL_URL:-}" && -f "$REPO_DIR/dotfiles/autostart/strix-side-panel.desktop" ]]; then
-        mkdir -p "$HOME/.config/autostart"
-        sed "s|^Exec=.*|Exec=google-chrome-stable --app=${SIDE_PANEL_URL}|" \
-          "$REPO_DIR/dotfiles/autostart/strix-side-panel.desktop" \
-          > "$HOME/.config/autostart/strix-side-panel.desktop"
+      # A window has one geometry, so "small on CODE, large on WEB" cannot be a rule.
+      # This KWin script moves whichever browser window is marked On All Desktops.
+      if [[ -d "$REPO_DIR/dotfiles/kwin-scripts/strix-roaming-browser" ]]; then
+        mkdir -p "$HOME/.local/share/kwin/scripts"
+        rm -rf "$HOME/.local/share/kwin/scripts/strix-roaming-browser"
+        cp -r "$REPO_DIR/dotfiles/kwin-scripts/strix-roaming-browser" \
+              "$HOME/.local/share/kwin/scripts/"
+        kwriteconfig6 --file kwinrc --group Plugins --key strix-roaming-browserEnabled true
       fi
       if [[ -f "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" ]]; then
         mkdir -p "$HOME/.config/autostart"
