@@ -132,8 +132,8 @@ if have kwriteconfig6; then
     if [[ -n "$id1" && -n "$id2" && -n "$id3" && -n "$id4" ]]; then
       cat >"$HOME/.config/kwinrulesrc" <<EOF
 [General]
-count=4
-rules=ls-code,ls-web,ls-science,ls-comm
+count=5
+rules=ls-vertical-dock,ls-code,ls-web,ls-science,ls-comm
 
 [ls-code]
 Description=linux-setup: editors and terminals on CODE
@@ -144,14 +144,37 @@ wmclassmatch=3
 wmclasscomplete=false
 types=1
 
-[ls-web]
-Description=linux-setup: browser on WEB
-desktops=$id2
+[ls-vertical-dock]
+Description=linux-setup: VerticalDock terminal, bottom half of the vertical screen, all desktops
+wmclass=com.mitchellh.ghostty
+wmclassmatch=2
+wmclasscomplete=false
+title=VerticalDock
+titlematch=2
+types=1
+screen=0
+screenrule=2
+desktops=
 desktopsrule=2
+position=0,960
+positionrule=2
+size=1080,960
+sizerule=2
+
+[ls-web]
+Description=linux-setup: browser pinned to the top half of the vertical screen, all desktops
 wmclass=google-chrome
 wmclassmatch=2
 wmclasscomplete=false
 types=1
+screen=0
+screenrule=2
+desktops=
+desktopsrule=2
+position=0,0
+positionrule=3
+size=1080,960
+sizerule=3
 
 [ls-science]
 Description=linux-setup: RStudio, Positron, Jupyter on SCIENCE
@@ -171,6 +194,13 @@ wmclassmatch=3
 wmclasscomplete=false
 types=1
 EOF
+      # The dock terminal is identified by its title, so it must actually be launched
+      # with one. Autostart it; the ls-vertical-dock rule places it from birth.
+      if [[ -f "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" ]]; then
+        mkdir -p "$HOME/.config/autostart"
+        ln -sfn "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" \
+                "$HOME/.config/autostart/strix-vertical-dock.desktop"
+      fi
       qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
       log "window rules written (System Settings > Window Management > Window Rules to adjust)"
     else

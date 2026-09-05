@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Vertical dock terminal
+Comment=Terminal pinned to the bottom half of the vertical screen (see kwinrulesrc ls-vertical-dock)
+Exec=ghostty --title=VerticalDock
+Icon=utilities-terminal
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
