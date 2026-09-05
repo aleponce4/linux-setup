@@ -71,7 +71,14 @@ done < <(nmcli -t -f NAME,TYPE,DEVICE con show)
 log "Also enable 'Power On By PCI-E' / WoL and disable ErP in the ASUS UEFI for wake from full power-off."
 
 # ---- Chrome Remote Desktop host (virtual X11 Plasma session; the console Wayland session cannot be shared unattended) ----
-if [[ "${ENABLE_CRD:-yes}" == "yes" ]]; then
+# WARNING: Chrome Remote Desktop installs a user unit with
+#   WantedBy=gnome-session.target plasma-workspace.target
+# so it starts with every Plasma login and launches `kwin_x11 --replace`. On a Wayland
+# session that aborts (SIGABRT in qFatal) and takes the whole session down with it -
+# observed on this machine 2026-09-05, losing every open window. Default is now "no";
+# KDE RDP (krdp, installed above) over Tailscale does the same job without fighting the
+# compositor. If you enable this, mask the unit or expect to lose your session.
+if [[ "${ENABLE_CRD:-no}" == "yes" ]]; then
   dpkg -s chrome-remote-desktop >/dev/null 2>&1 || download_deb https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
   if dpkg -s chrome-remote-desktop >/dev/null 2>&1; then
     usergroup_add chrome-remote-desktop
