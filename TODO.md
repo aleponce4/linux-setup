@@ -88,3 +88,149 @@ diverged from GitHub (`Baby_weight`, `Bell_Seed_project_repo`, `lab-bioinfo-temp
 - **HANDOFF §4 housekeeping**: revoke the Tailscale auth key, `passwd`, delete the
   `strix-installer` and `keycheck-throwaway` tailnet nodes, delete
   `/mnt/winrescue/secrets-passphrase.txt` once it is in a password manager.
+
+---
+
+# Final step: declutter and organize
+
+The last pass that turns a provisioned machine into one that is pleasant to work on.
+Everything below is deliberate and reversible; none of it is done automatically, because
+several items involve deciding what to keep.
+
+## 0. FIRST — rescue the work sitting on the Desktop
+
+Two Desktop folders are live git checkouts with work that exists **nowhere else**:
+
+| Path | State |
+|---|---|
+| `~/Desktop/Baby_weight` | branch `main`, **12 unpushed commits**, 6 uncommitted files |
+| `~/Desktop/ProLIBSpector` | branch `codex/seed-targeting-learning`, **197 uncommitted files** |
+
+Both are also listed in `lists/git-repos.txt`, so module 80 will clone *fresh copies* into
+`~/work/`, leaving two divergent checkouts of the same repo. Resolve before decluttering:
+
+```sh
+cd ~/Desktop/Baby_weight     && git status && git push          # then move, do not delete
+cd ~/Desktop/ProLIBSpector   && git status                      # review the 197 changes first
+```
+
+Then move them into the layout rather than re-cloning:
+
+```sh
+mkdir -p ~/work/personal ~/work/onteko
+mv ~/Desktop/Baby_weight     ~/work/personal/baby-weight-tracker
+mv ~/Desktop/ProLIBSpector   ~/work/onteko/ProLIBSpector
+```
+
+`clone_repo()` in `80-envs.sh` skips any destination that already has a `.git`, so moving
+them first makes module 80 leave them alone.
+
+## 1. Desktop: from 13 items to zero
+
+Dead Windows shortcuts (`.url` files are Windows internet shortcuts — inert on Linux):
+
+```sh
+rm ~/Desktop/"Manor Lords.url" ~/Desktop/"Total War PHARAOH.url" \
+   ~/Desktop/"Total War PHARAOH DYNASTIES.url" ~/Desktop/Bazarr.url
+```
+
+Kubuntu promo links, shipped with the distro image:
+
+```sh
+rm ~/Desktop/org.kubuntu.web.home.desktop ~/Desktop/org.kfocus.web.howtos.desktop
+```
+
+The rest is filing, not deleting:
+
+| Item | Home |
+|---|---|
+| `2026_Resum`, `Pam's resume`, `era-commons-account-request-form.pdf` | `~/Documents/personal/` |
+| `Onteko_LIBS_Report`, `Onteko-LIBS-Elemental-Mapping-Demonstration.pdf` | `/data/onteko/reports/` |
+
+Target: **an empty desktop.** The design system in `docs/design-system.md` already calls for
+this — the launcher is KRunner, not a field of icons.
+
+## 2. App menu: 213 entries, 82 with no category at all
+
+Kubuntu ships a generic menu that does not match how this machine is used. Group the tools
+by what they are *for*, using custom XDG categories:
+
+| Category | Members |
+|---|---|
+| **AI** | Claude Code, Codex, Antigravity, Copilot CLI, OpenCode, Speech Note |
+| **IDEs & Editors** | VS Code, RStudio, Positron, Mark Text, Obsidian |
+| **Science** | R, Quarto, DuckDB, Jupyter, CVAT, ChimeraX/MEGA if added later |
+| **Containers** | Docker, lazydocker, Distrobox, Apptainer |
+| **Terminal** | Ghostty, yazi, btop, lazygit |
+
+The mechanism: put a copy of each `.desktop` file in `~/.local/share/applications/` with an
+added `Categories=X-AI;` (etc.), then declare the menus in
+`~/.config/menus/applications.menu`. This is XDG-standard, survives Plasma updates, and is
+per-user — nothing in `/usr` is modified. `kmenuedit` can do it by hand, but a script in
+`dotfiles/kde/` would make it reproducible, which is the point of this repo.
+
+Also worth doing: **hide, do not uninstall**, the entries you never launch — `NoDisplay=true`
+in a user-level copy keeps the package (and its libraries) while removing the menu noise.
+Many of the 82 uncategorised entries are library helpers that were never meant to be visible.
+
+## 3. Panel: pin what you actually open
+
+`dotfiles/kde/panel.js` already builds one floating icon-only panel via the Plasma scripting
+API, and `30-desktop-kde.sh` applies it once (guarded by
+`~/.config/.linux-setup-panel-applied`). Decide the pinned set and put it in that script so
+it is reproducible rather than hand-arranged:
+
+Suggested: **Ghostty · VS Code · Chrome · Dolphin · Obsidian · Spotify**
+
+Everything else stays in KRunner. A panel is for the six things opened constantly; a launcher
+is for the other two hundred. Delete the marker file and re-run `./bootstrap.sh 30` to
+re-apply after editing.
+
+System tray: `System Tray > Configure > Entries` — set anything not glanced at to Hidden.
+Realistically only network, volume, clipboard and updates earn a permanent slot.
+
+## 4. KDE Activities for the Onteko / UTHSC split
+
+The strongest organizational tool in Plasma and the one almost nobody uses. Activities are
+**not** virtual desktops: each has its own wallpaper, widgets, pinned apps and window set, and
+persists across reboots.
+
+```
+Activity "Onteko"   -> ~/work/onteko,  /data/onteko,  ProLIBSpector
+Activity "UTHSC"    -> ~/work/uthsc,   /data/{libs,seed}
+Activity "Personal" -> everything else
+```
+
+Switch with `Meta+Tab`. The five named workspaces (CODE/WEB/SCIENCE/COMM/MISC) then operate
+*inside* whichever context is active, which is a much better fit for two jobs than trying to
+encode both jobs into five desktops. Set up under
+`System Settings > Workspace Behavior > Activities`.
+
+## 5. Dolphin places sidebar
+
+The default sidebar points at Windows-shaped folders. Replace with the paths actually used:
+
+```
+/data/libs        /data/onteko      /data/seed
+~/work/onteko     ~/work/personal
+/backup           /mnt/winrescue  (read-only rescue drive)
+```
+
+## 6. Deduplicate and set defaults
+
+- **Duplicate entries**: Flatpak and apt versions of the same app both appear in the menu.
+  `flatpak list --app` against `dpkg -l` finds them; keep one.
+- **MIME defaults** worth setting explicitly: `.md` -> Mark Text, `.pdf` -> Okular,
+  `.csv` -> a spreadsheet or VS Code, images -> Gwenview, video -> mpv.
+  Module 30 sets the first two; the rest by hand or added to the module.
+- **Autostart audit**: `System Settings > Autostart` — remove anything inherited from the
+  distro image that is not wanted at every login.
+
+## 7. Housekeeping that pays off later
+
+- `~/Downloads` and `~/Documents` were restored wholesale from Windows and carry that
+  structure. Worth one pass now while the contents are still familiar.
+- `sudo apt autoremove --purge` after the setup settles.
+- Once everything is confirmed working, remove the temporary blanket sudo rule:
+  `sudo rm /etc/sudoers.d/99-claude-setup-TEMPORARY`
+  (module 40's scoped `/etc/sudoers.d/90-agent-admin` is the permanent replacement).
