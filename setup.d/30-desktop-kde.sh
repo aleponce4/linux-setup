@@ -221,6 +221,9 @@ EOF
         rm -rf "$HOME/.local/share/kwin/scripts/strix-roaming-browser"
         cp -r "$REPO_DIR/dotfiles/kwin-scripts/strix-roaming-browser" \
               "$HOME/.local/share/kwin/scripts/"
+        # KWin caches compiled scripts; reconfigure alone will not pick up an edit, so a
+        # changed script needs its metadata Version bumped and the qmlcache cleared.
+        rm -rf "$HOME/.cache/kwin/qmlcache" 2>/dev/null || true
         kwriteconfig6 --file kwinrc --group Plugins --key strix-roaming-browserEnabled true
       fi
       if [[ -f "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" ]]; then

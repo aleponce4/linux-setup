@@ -3,7 +3,7 @@
     "Id": "strix-roaming-browser",
     "Name": "Strix roaming browser",
     "Description": "Moves the pinned browser window between the vertical screen and the main screen as the virtual desktop changes",
-    "Version": "1.0",
+    "Version": "1.1",
     "License": "MIT",
     "Authors": [{ "Name": "linux-setup" }],
     "EnabledByDefault": true
