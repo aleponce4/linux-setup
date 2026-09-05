@@ -8,6 +8,12 @@ LISTS_DIR="$REPO_DIR/lists"
 RUN_LOG="${RUN_LOG:-/dev/null}"
 export LISTS_DIR
 export DEBIAN_FRONTEND=noninteractive
+# sudo runs with env_reset, which discards DEBIAN_FRONTEND from the exported environment
+# above. Every apt invocation must therefore set it explicitly on the sudo command line,
+# or packages that ask debconf questions (iperf3, ttf-mscorefonts-installer, ...) will
+# block forever on a whiptail prompt nobody is there to answer.
+APT_NI=(sudo DEBIAN_FRONTEND=noninteractive apt-get
+        -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 
 log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" | tee -a "$RUN_LOG" >&2; }
 warn() { log "WARN: $*"; }
@@ -129,7 +135,7 @@ read_list() {
 
 apt_update_once() {
   if [[ -z "${_APT_UPDATED:-}" ]]; then
-    sudo apt-get update -qq
+    "${APT_NI[@]}" update -qq
     _APT_UPDATED=1
   fi
 }
@@ -143,10 +149,10 @@ apt_install() {
   ((${#missing[@]})) || return 0
   apt_update_once
   log "apt install: ${missing[*]}"
-  if ! sudo apt-get install -y -qq --no-install-recommends "${missing[@]}"; then
+  if ! "${APT_NI[@]}" install -y -qq --no-install-recommends "${missing[@]}"; then
     warn "batch install failed; retrying one by one"
     for p in "${missing[@]}"; do
-      sudo apt-get install -y -qq --no-install-recommends "$p" || warn "could not install $p"
+      "${APT_NI[@]}" install -y -qq --no-install-recommends "$p" || warn "could not install $p"
     done
   fi
 }
@@ -179,7 +185,7 @@ download_deb() {
   tmp="$(mktemp --suffix=.deb)"
   log "downloading $url"
   curl -fL --retry 3 -o "$tmp" "$url" || { warn "download failed: $url"; rm -f "$tmp"; return 1; }
-  sudo apt-get install -y -qq "$tmp" || warn "install failed: $url"
+  "${APT_NI[@]}" install -y -qq "$tmp" || warn "install failed: $url"
   rm -f "$tmp"
 }
 

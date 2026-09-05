@@ -30,7 +30,14 @@ IPV4
   log "no IPv6 default route; pinned apt to IPv4"
 fi
 
-echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
+# Pre-answer every debconf question an unattended run can hit. Without these the install
+# blocks on a whiptail prompt with nobody there to answer it (iperf3 cost ~50 minutes once).
+sudo debconf-set-selections <<'DEBCONF'
+ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
+iperf3 iperf3/start_daemon boolean false
+wireshark-common wireshark-common/install-setuid boolean false
+postfix postfix/main_mailer_type select No configuration
+DEBCONF
 apt_update_once
 log "full-upgrade (first run can take a while)"
 sudo apt-get full-upgrade -y -qq
