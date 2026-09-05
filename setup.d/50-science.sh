@@ -14,6 +14,16 @@ apt_install r-base r-base-dev
 
 # ---- r2u: every CRAN package as a binary .deb, wired into install.packages() via bspm ----
 if ! dpkg -l r-cran-bspm 2>/dev/null | grep -q '^ii'; then
+  # The r2u installer re-declares the CRAN repo itself, in deb822 form, signed by Rutter's
+  # key. The cran.list written above points at the same repo signed by a different keyring,
+  # and apt refuses to read ANY sources when one repo carries two Signed-By values:
+  #   E: Conflicting values set for option Signed-By regarding source .../resolute-cran40/
+  # That breaks apt system-wide, not just for R, so drop our entry before r2u adds its own.
+  if [[ -f /etc/apt/sources.list.d/cran.list ]]; then
+    sudo rm -f /etc/apt/sources.list.d/cran.list
+    _APT_UPDATED=""
+    log "removed our cran.list; r2u re-declares CRAN with its own key"
+  fi
   R2U="https://raw.githubusercontent.com/eddelbuettel/r2u/master/inst/scripts/add_cranapt_${R_CRAN_CODENAME}.sh"
   if curl -fsI "$R2U" >/dev/null 2>&1; then
     # Keep the output: when this fails, every R package compiles from source instead of
