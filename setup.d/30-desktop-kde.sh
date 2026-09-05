@@ -181,6 +181,19 @@ EOF
   fi
 
   # ---- shortcuts: Meta+Enter terminal, Meta+Shift+S region screenshot, Meta+1..5 workspaces, Meta+Ctrl+arrows ----
+  # Meta+/ opens the printable shortcut reference. New users need the map more than
+  # any single application, and it is the one key that is genuinely free on Plasma
+  # (Meta+F1 is already Help). The .desktop lives in productivity/ so the launcher entry
+  # and the shortcut stay together.
+  if [[ -f "$REPO_DIR/productivity/applications/strix-cheatsheet.desktop" ]]; then
+    mkdir -p "$HOME/.local/share/applications"
+    ln -sfn "$REPO_DIR/productivity/applications/strix-cheatsheet.desktop" \
+            "$HOME/.local/share/applications/strix-cheatsheet.desktop"
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    kwriteconfig6 --file kglobalshortcutsrc --group services \
+      --group strix-cheatsheet.desktop --key _launch "Meta+/,none,Strix Cheat Sheet"
+  fi
+
   ks() { kwriteconfig6 --file kglobalshortcutsrc "$@"; }
   ks --group services --group com.mitchellh.ghostty.desktop --key _launch "Meta+Return"
   ks --group services --group org.kde.spectacle.desktop --key RectangularRegionScreenShot "Meta+Shift+S,Meta+Shift+Print,Capture Rectangular Region"

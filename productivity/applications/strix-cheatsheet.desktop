@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Strix Cheat Sheet
+GenericName=Shortcuts and daily commands
+Comment=Keyboard shortcuts, workspaces, agent prefixes and AI actions for this workstation
+Exec=xdg-open %h/linux-setup/output/pdf/strix-productivity-cheatsheet.pdf
+Icon=help-hint
+Terminal=false
+Categories=Documentation;Utility;
+Keywords=cheatsheet;shortcuts;help;keys;reference;strix;
+StartupNotify=false
