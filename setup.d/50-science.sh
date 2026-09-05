@@ -10,20 +10,23 @@ apt_install_list "$LISTS_DIR/apt-science.txt"
 # ---- R from CRAN's Ubuntu repo ----
 add_apt_repo cran https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
   "deb [signed-by=/etc/apt/keyrings/cran.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${R_CRAN_CODENAME}-cran40/"
+# r2u declares this same CRAN repo in deb822 form (cran.sources) signed by Rutter's key.
+# Two Signed-By values for one repo make apt refuse to read EVERY source, system-wide:
+#   E: Conflicting values set for option Signed-By regarding source .../resolute-cran40/
+#   E: The list of sources could not be read.
+# Whichever ran first, keep r2u's and drop ours. This must sit outside the bspm branch
+# below: once bspm is installed that branch is skipped, but add_apt_repo above still
+# recreates cran.list on every run, so the conflict would silently return.
+if [[ -f /etc/apt/sources.list.d/cran.sources && -f /etc/apt/sources.list.d/cran.list ]]; then
+  sudo rm -f /etc/apt/sources.list.d/cran.list
+  _APT_UPDATED=""
+  log "dropped cran.list; r2u's cran.sources already declares CRAN"
+fi
+
 apt_install r-base r-base-dev
 
 # ---- r2u: every CRAN package as a binary .deb, wired into install.packages() via bspm ----
 if ! dpkg -l r-cran-bspm 2>/dev/null | grep -q '^ii'; then
-  # The r2u installer re-declares the CRAN repo itself, in deb822 form, signed by Rutter's
-  # key. The cran.list written above points at the same repo signed by a different keyring,
-  # and apt refuses to read ANY sources when one repo carries two Signed-By values:
-  #   E: Conflicting values set for option Signed-By regarding source .../resolute-cran40/
-  # That breaks apt system-wide, not just for R, so drop our entry before r2u adds its own.
-  if [[ -f /etc/apt/sources.list.d/cran.list ]]; then
-    sudo rm -f /etc/apt/sources.list.d/cran.list
-    _APT_UPDATED=""
-    log "removed our cran.list; r2u re-declares CRAN with its own key"
-  fi
   R2U="https://raw.githubusercontent.com/eddelbuettel/r2u/master/inst/scripts/add_cranapt_${R_CRAN_CODENAME}.sh"
   if curl -fsI "$R2U" >/dev/null 2>&1; then
     # Keep the output: when this fails, every R package compiles from source instead of
@@ -69,8 +72,16 @@ fi
 
 # ---- Positron (latest GitHub release .deb) ----
 if ! have positron; then
-  url="$(github_latest_asset posit-dev/positron '(x64|amd64).*\.deb$' || true)"
-  [[ -n "$url" ]] && download_deb "$url" || warn "could not resolve Positron .deb"
+  # posit-dev/positron tags its releases on GitHub but attaches NO assets to them, so
+  # github_latest_asset can never resolve a .deb here. The package is published on Posit's
+  # CDN, named after the release tag.
+  ptag="$(curl -fsSL 'https://api.github.com/repos/posit-dev/positron/releases?per_page=1' 2>/dev/null \
+          | grep -m1 '"tag_name"' | cut -d'"' -f4 || true)"
+  if [[ -n "$ptag" ]]; then
+    download_deb "https://cdn.posit.co/positron/releases/deb/x86_64/Positron-${ptag}-x64.deb"
+  else
+    warn "could not determine the latest Positron release tag"
+  fi
 fi
 if have positron; then
   installed="$(positron --list-extensions 2>/dev/null | tr 'A-Z' 'a-z')"
@@ -91,7 +102,24 @@ have chimerax || { [[ -n "${CHIMERAX_DEB_URL:-}" ]] && download_deb "$CHIMERAX_D
 have megax || have mega || { [[ -n "${MEGA_DEB_URL:-}" ]] && download_deb "$MEGA_DEB_URL" || warn "MEGA: download the Ubuntu .deb from https://www.megasoftware.net/ and set MEGA_DEB_URL"; }
 
 # ---- DuckDB CLI ----
-have duckdb || curl -fsSL https://install.duckdb.org | sh >/dev/null 2>&1 || warn "duckdb install failed"
+if ! have duckdb; then
+  # install.duckdb.org fails quietly in a non-interactive shell. DuckDB publishes no .deb,
+  # only a zipped static binary, so take that directly.
+  if ! curl -fsSL https://install.duckdb.org | sh >/dev/null 2>&1 || ! have duckdb; then
+    durl="$(github_latest_asset duckdb/duckdb 'duckdb_cli-linux-amd64\.zip$' || true)"
+    if [[ -n "$durl" ]]; then
+      dtmp="$(mktemp -d)"
+      if curl -fL --retry 3 -o "$dtmp/d.zip" "$durl" && unzip -q -o "$dtmp/d.zip" -d "$dtmp"; then
+        install -m0755 "$dtmp/duckdb" "$HOME/.local/bin/duckdb" && log "installed duckdb CLI"
+      else
+        warn "duckdb download failed"
+      fi
+      rm -rf "$dtmp"
+    else
+      warn "could not resolve the duckdb CLI zip"
+    fi
+  fi
+fi
 
 # ---- Ocean Optics spectrometer (python-seabreeze / pyusb) without root ----
 write_file_sudo /etc/udev/rules.d/10-oceanoptics.rules 0644 <<'EOF'

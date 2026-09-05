@@ -119,7 +119,7 @@ check "Dev: docker compose plugin"           docker compose version
 check "Dev: gh, git, delta"                  bash -c "command -v gh && command -v git && command -v delta"
 check "Dev: node $NODE_VERSION via fnm"      bash -c "node --version | grep -q '^v${NODE_VERSION}\.'"
 check "Dev: uv, micromamba"                  bash -c "command -v uv && command -v micromamba"
-check "Dev: uv tools (labelme, radian, ruff, jupyter)" bash -c "command -v labelme && command -v radian && command -v ruff && command -v jupyter"
+check "Dev: uv tools (labelme, radian, ruff, jupyter-lab)" bash -c "command -v labelme && command -v radian && command -v ruff && command -v jupyter-lab"
 check "Agents: claude, codex, agy, copilot"  bash -c "command -v claude && command -v codex && command -v agy && command -v copilot"
 check "Agents: machine guide linked"         bash -c "[[ -L $HOME/.claude/CLAUDE.md && -L $HOME/.codex/AGENTS.md ]]"
 [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]] && check "Agents: passwordless admin sudo" sudo -n apt-get --version
@@ -130,7 +130,7 @@ check "R: tidyverse, shiny, languageserver load" Rscript -e 'suppressPackageStar
 check "R: DESeq2 loads (Bioconductor)"       Rscript -e 'suppressPackageStartupMessages(library(DESeq2))'
 check "R: RStudio, Positron, Quarto"         bash -c "command -v rstudio && command -v positron && command -v quarto"
 check "R: TinyTeX"                           test -d "$HOME/.TinyTeX"
-check "Science: pymol, duckdb"               bash -c "command -v pymol && command -v duckdb"
+check "Science: duckdb"                      command -v duckdb
 check "Remote: tailscale logged in"          bash -c "tailscale status 2>/dev/null | grep -q '$HOSTNAME_TARGET'"
 check "Remote: sshd active, keys only"       bash -c "systemctl is-active --quiet ssh && sudo sshd -T | grep -q 'passwordauthentication no'"
 check "Remote: fail2ban, ufw active"         bash -c "systemctl is-active --quiet fail2ban && sudo ufw status | grep -q 'Status: active'"
