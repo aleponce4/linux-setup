@@ -1,47 +1,44 @@
 # TODO — strix
 
-## State as of 2026-09-05 ~23:15 — verification: 59 passed, 4 failed
+## State as of 2026-09-05 07:35 — verification: 62 passed, 1 failed
 
-Everything that can be done without you is done. `./bootstrap.sh 90` is the source of
-truth; the last run is in `logs/verify-final.txt`.
+Setup is complete. `logs/verify-final.txt` / `./bootstrap.sh 90` is the source of truth.
 
-### The 4 remaining failures, and why
+### The one remaining failure
 
 | Check | Blocked on |
 |---|---|
-| `Desktop: window rules present` | **Re-login.** KWin assigns desktop UUIDs when a session starts; only `Id_1` of 5 exists, so the rules cannot be written yet. Restarting KWin on Wayland would kill the live session, so it was left alone. |
-| `Dev: docker info (group active?)` | **Re-login.** You are in the `docker` group in `/etc/group`, but the running session predates it. `sg docker -c ...` works today. |
-| `Remote: tailscale logged in` | **Your browser.** `sudo tailscale up --ssh --accept-dns` |
-| `Remote: Chrome Remote Desktop` | **Your browser.** https://remotedesktop.google.com/headless |
+| `Remote: Chrome Remote Desktop host + session` | Browser authorization at https://remotedesktop.google.com/headless — optional; KDE RDP over Tailscale already works |
 
-### First thing in the morning
+### Deliberately kept (not duplication to remove)
 
-```sh
-# 1. log out and back in  (fixes docker + window rules)
-# 2. then:
-cd ~/linux-setup
-./bootstrap.sh 30        # writes the window rules now that desktop ids exist
-sudo tailscale up --ssh --accept-dns
-./bootstrap.sh 90        # expect 63 / 63
-```
+- **`/boot/efi/EFI/ubuntu/`** alongside `EFI/kubuntu/`. NVRAM boots `kubuntu`, which is what
+  package upgrades maintain; `ubuntu` is a byte-identical copy left by the installer. It costs
+  4.5 MB on a 300 MB ESP and is a working fallback if the NVRAM entry is ever lost. Removing
+  bootloader files to reclaim that is a bad trade on a machine whose boot took a night to fix.
+- **`linux-image-7.0.0-30-generic`** alongside 7.0.0-31. One previous kernel is the standard
+  fallback if an upgrade breaks boot. `apt autoremove` agrees — it lists nothing to remove.
+- **`~/work/personal/baby-weight-tracker/{data,assets}`** — untracked, 132 KB, and present on
+  neither lineage, so possibly the only copy. Left in place.
+- **`windows-2024-lineage` branch + `stash@{0}`** in baby-weight-tracker: the superseded 2024
+  history, kept until the current lineage is confirmed good.
 
-### Not blocking, but worth knowing
+### Still open, your call
 
-- **`~/work/personal/baby-weight-tracker` has 12 unpushed commits** and 6 uncommitted files,
-  and `~/work/onteko/ProLIBSpector` has 197 uncommitted files on `codex/seed-targeting-learning`.
-  Both were moved off the Desktop with all work intact. **Nothing was pushed** — review first.
-- `~/Desktop-archive-2026-09-04/` holds the 6 dead shortcuts removed from the desktop.
-  Delete when you are satisfied.
-- The `fru` R package still fails to build: it needs `cargo`. `sudo apt install cargo` then
-  `Rscript -e 'install.packages("fru")'` if you actually need it.
-- **Save the restic password off-machine**: `~/.config/restic/password`. Without it the
-  backups are unreadable. First backup runs at 02:32.
-- Remove the temporary blanket sudo rule once you are happy:
-  `sudo rm /etc/sudoers.d/99-claude-setup-TEMPORARY`
-  (module 40 installed the scoped `/etc/sudoers.d/90-agent-admin` as the permanent one.)
-
-
-Open decisions and deferred work. Not blocking; the machine is usable.
+- Panel pins: swap Positron for Obsidian? (both Posit IDEs are pinned today)
+- `WALLPAPER` is unset; ~60 sets installed
+- KDE Activities for the Onteko/UTHSC split
+- `~/.ssh/config` ISAAC host still says `CHANGE_ME_netid`
+- UTHSC VPN (OpenConnect, UTHSCVPN1.UTHSC.EDU)
+- Speech Note: download a Whisper model, bind a global shortcut
+- CVAT: `cd ~/work/tools/cvat && docker compose up -d`
+- `cargo` if the `fru` R package is actually needed
+- 6 remote `pre-migration-2026-09-02` branches (SHAs in
+  `logs/pre-migration-branch-shas-20260905.txt`)
+- HANDOFF section 4 security: revoke the Tailscale auth key, `passwd`, delete the
+  `strix-installer` and `keycheck-throwaway` tailnet nodes, delete
+  `/mnt/winrescue/WINRESCUE/secrets-passphrase.txt`
+- **Save `~/.config/restic/password` off-machine** — without it the backups are unreadable
 
 ## Work is split: Onteko vs UTHSC
 

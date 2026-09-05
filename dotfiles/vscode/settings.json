@@ -4,7 +4,10 @@
     "workbench.preferredLightColorTheme": "Light Modern",
     "security.workspace.trust.untrustedFiles": "open",
     "notebook.output.textLineLimit": 50,
-    "workbench.settings.applyToAllProfiles": ["notebook.output.textLineLimit"],
+    "workbench.settings.applyToAllProfiles": [
+        "notebook.output.textLineLimit",
+        "editor.fontSize"
+    ],
     "workbench.editorAssociations": {
         "*.copilotmd": "vscode.markdown.preview.editor",
         "*.qmd": "quarto.visualEditor"
