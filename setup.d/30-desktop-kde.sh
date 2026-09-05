@@ -10,7 +10,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
 apt_install_list "$LISTS_DIR/apt-desktop.txt"
 
 # ---- boot into the desktop (matters when the base came from the Ubuntu Server automated installer) ----
-if dpkg -s kubuntu-desktop >/dev/null 2>&1; then
+if dpkg -s plasma-workspace >/dev/null 2>&1; then
   if [[ "$(systemctl get-default)" != "graphical.target" ]]; then
     sudo systemctl set-default graphical.target >/dev/null
     log "default boot target set to graphical"
@@ -74,7 +74,9 @@ if have google-chrome-stable; then
   xdg-settings set default-web-browser google-chrome.desktop 2>/dev/null || true
   have kwriteconfig6 && kwriteconfig6 --file kdeglobals --group General --key BrowserApplication google-chrome.desktop
 fi
-have xdg-mime && { xdg-mime default com.github.marktext.marktext.desktop text/markdown 2>/dev/null || true; xdg-mime default okularApplication_pdf.desktop application/pdf 2>/dev/null || true; }
+have xdg-mime && { xdg-mime default com.github.marktext.marktext.desktop text/markdown 2>/dev/null || true;
+  if have okular; then xdg-mime default okularApplication_pdf.desktop application/pdf 2>/dev/null || true;
+  elif have google-chrome-stable; then xdg-mime default google-chrome.desktop application/pdf 2>/dev/null || true; fi; }
 
 if have kwriteconfig6; then
   # ---- look: Breeze Dark, accent colour from the wallpaper (native), Papirus, Inter, JetBrainsMono, no window borders ----

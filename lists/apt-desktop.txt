@@ -1,8 +1,20 @@
 # Desktop apps and KDE integration. Installed by setup.d/30-desktop-kde.sh
-# kubuntu-desktop pulls in Plasma, SDDM and the whole KDE application set. It is what turns the
-# Ubuntu Server base laid down by the automated installer into a full Kubuntu desktop. Harmless
-# (already satisfied) if this ever runs on a machine installed from the Kubuntu desktop image.
-kubuntu-desktop
+#
+# The kubuntu-desktop metapackage is deliberately NOT used. Its entire purpose is to pull the
+# default Kubuntu application set, which this setup then strips back out (Okular, Kate, VLC,
+# Inkscape, KolourPaint, kwalletmanager). Depending on it means every run fights its own skip
+# list. The Plasma pieces actually required are listed explicitly instead; on a machine installed
+# from the Kubuntu desktop image they are already present and apt_install is a no-op.
+
+# --- Plasma core (required; 90-verify checks these) ---
+plasma-desktop
+plasma-workspace
+kwin-wayland
+sddm
+systemsettings
+dolphin
+
+# --- integration, fonts, theming ---
 flatpak
 plasma-discover-backend-flatpak
 kde-config-flatpak
@@ -14,13 +26,8 @@ python3-dbus
 python3-gi
 ydotool
 ksshaskpass
-kwalletmanager
-inkscape
-vlc
-okular
-okular-extra-backends
-kate
-kolourpaint
+
+# --- utilities kept ---
 filelight
 spectacle
 kdeconnect
@@ -29,3 +36,13 @@ kdeplasma-addons
 network-manager-openconnect
 openconnect
 cameractrls
+
+# --- deliberately removed (lean setup, 2026-09-04) ---
+# kubuntu-desktop        metapackage; drags the whole default app set back in
+# okular                 PDF: Chrome handles it; re-add if you want annotation support
+# okular-extra-backends
+# kate                   VS Code covers editing
+# kolourpaint            no raster editing needed
+# inkscape               no vector editing needed
+# vlc                    no media player installed; 'sudo apt install mpv' if you want one
+# kwalletmanager         GUI only; the KWallet daemon itself stays (Chrome/Wi-Fi/SSH passphrases)

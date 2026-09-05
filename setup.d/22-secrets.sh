@@ -5,9 +5,16 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
 
-SEC="/mnt/winrescue/secrets.7z"
 ls /mnt/winrescue >/dev/null 2>&1 || true   # trigger the automount
-if [[ ! -f "$SEC" ]]; then log "no $SEC; nothing to restore"; exit 0; fi
+# The drive was written from Windows with the payload inside a top-level WINRESCUE\ folder,
+# so the archive is one level deeper than the mount point. Accept either layout.
+SEC=""
+for cand in /mnt/winrescue/secrets.7z /mnt/winrescue/WINRESCUE/secrets.7z; do
+  [[ -f "$cand" ]] && { SEC="$cand"; break; }
+done
+[[ -n "$SEC" ]] || SEC="$(find /mnt/winrescue -maxdepth 3 -name secrets.7z -type f 2>/dev/null | head -n1)"
+if [[ -z "$SEC" || ! -f "$SEC" ]]; then log "no secrets.7z under /mnt/winrescue; nothing to restore"; exit 0; fi
+log "using secrets archive: $SEC"
 if [[ -f "$HOME/.ssh/id_ed25519" && -f "$HOME/.claude/.credentials.json" ]]; then log "secrets already restored"; exit 0; fi
 apt_install p7zip-full
 

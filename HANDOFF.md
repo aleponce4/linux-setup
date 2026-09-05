@@ -43,6 +43,24 @@ of some of your data.
 
 ---
 
+## Required BIOS settings (NOT stored on disk — re-apply after any CMOS clear or BIOS flash)
+
+Without these the machine boots to a black screen: the Arc B570 runs in "Small BAR" mode
+and `kwin_wayland` cannot bring up a display. Diagnosis: `docs/boot-and-graphics.md`.
+
+| Setting | Value | Why |
+|---|---|---|
+| `Advanced > PCI Subsystem Settings > Above 4G Decoding` | Enabled | Lets the 16 GB GPU BAR live above the 4 GB line |
+| `Advanced > PCI Subsystem Settings > Re-Size BAR Support` | Enabled | Intel Arc requires ReBAR |
+| `Boot > CSM > Launch CSM` | Disabled | ASUS gates ReBAR behind this |
+| `Advanced > APM > Power On By PCI-E` | Enabled | Wake-on-LAN (module 60) |
+| `Advanced > APM > ErP Ready` | Disabled | Would cut power to the NIC and break WoL |
+
+Verify: `sudo scripts/boot/verify-boot.sh` (check 9), or
+`sudo lspci -vv -s 09:00.0 | grep -A2 'Resizable BAR'` should say `current size: 16GB`.
+
+---
+
 ## 2. Hand back to the agent
 
 From the working desktop, open a terminal (Ctrl+Alt+T) and run:
@@ -97,20 +115,20 @@ cd ~/linux-setup
 ./bootstrap.sh 22        # SSH key, agent tokens, all your Wi-Fi networks
 ```
 
-It asks for the passphrase you saved. It is also at `/mnt/winrescue/secrets-passphrase.txt`.
+It asks for the passphrase you saved. It is also at `/mnt/winrescue/WINRESCUE/secrets-passphrase.txt`.
 
 ```bash
-rsync -avh --info=progress2 /mnt/winrescue/data/LIBS_Data/ /data/libs/
-rsync -avh --info=progress2 /mnt/winrescue/data/Desktop/Onteko/ /data/onteko/
-rsync -avh --info=progress2 /mnt/winrescue/data/Documents/Seed_LIBS_Classification/ /data/seed/Seed_LIBS_Classification/
-rsync -avh /mnt/winrescue/data/Documents/ ~/Documents/ --exclude Seed_LIBS_Classification
-rsync -avh /mnt/winrescue/data/Pictures/  ~/Pictures/
-rsync -avh /mnt/winrescue/data/dotfiles/.claude/projects/ ~/.claude/projects/
-rsync -avh /mnt/winrescue/usb-stick-backup/ /data/libs/ball-horticulture/
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/LIBS_Data/ /data/libs/
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/Desktop/Onteko/ /data/onteko/
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/Documents/Seed_LIBS_Classification/ /data/seed/Seed_LIBS_Classification/
+rsync -avh /mnt/winrescue/WINRESCUE/data/Documents/ ~/Documents/ --exclude Seed_LIBS_Classification
+rsync -avh /mnt/winrescue/WINRESCUE/data/Pictures/  ~/Pictures/
+rsync -avh /mnt/winrescue/WINRESCUE/data/dotfiles/.claude/projects/ ~/.claude/projects/
+rsync -avh /mnt/winrescue/WINRESCUE/usb-stick-backup/ /data/libs/ball-horticulture/
 ```
 
 Everything in `data/` was verified by SHA-256 against the originals: 122,649 files, zero mismatches. The
-old WSL is preserved whole at `/mnt/winrescue/wsl/ubuntu-2404.tar` if you need anything from it.
+old WSL is preserved whole at `/mnt/winrescue/WINRESCUE/wsl/ubuntu-2404.tar` if you need anything from it.
 
 Then the browser logins: `sudo tailscale up --ssh`, `gh auth login`, `codex login`, `agy`, Chrome, Zoom.
 
@@ -123,7 +141,7 @@ Verify the result with `./bootstrap.sh 90`, which prints a pass/fail table of ev
 - **Revoke the Tailscale auth key** at login.tailscale.com. It sat in plain text on the USB stick.
 - **Change the account password** (`passwd`) — it passed through a chat log.
 - Delete leftover tailnet nodes: `strix-installer`, `keycheck-throwaway`.
-- Delete `/mnt/winrescue/secrets-passphrase.txt` once it is in your password manager.
+- Delete `/mnt/winrescue/WINRESCUE/secrets-passphrase.txt` once it is in your password manager.
 - Reclaim the USB stick.
 
 ---

@@ -70,3 +70,19 @@ autoinstall/          archived Btrfs installer prototype; not supported for the 
 - Secrets never go in this repo. Logins are manual; tokens live in each tool's own store.
 - After a successful run, `./bootstrap.sh 90` must pass; fix the module, not the verify script.
 - Commit after every change.
+
+## Required BIOS settings (NOT stored on disk — re-apply after any CMOS clear or BIOS flash)
+
+Without these the machine boots to a black screen: the Arc B570 runs in "Small BAR" mode
+and `kwin_wayland` cannot bring up a display. Diagnosis: `docs/boot-and-graphics.md`.
+
+| Setting | Value | Why |
+|---|---|---|
+| `Advanced > PCI Subsystem Settings > Above 4G Decoding` | Enabled | Lets the 16 GB GPU BAR live above the 4 GB line |
+| `Advanced > PCI Subsystem Settings > Re-Size BAR Support` | Enabled | Intel Arc requires ReBAR |
+| `Boot > CSM > Launch CSM` | Disabled | ASUS gates ReBAR behind this |
+| `Advanced > APM > Power On By PCI-E` | Enabled | Wake-on-LAN (module 60) |
+| `Advanced > APM > ErP Ready` | Disabled | Would cut power to the NIC and break WoL |
+
+Verify: `sudo scripts/boot/verify-boot.sh` (check 9), or
+`sudo lspci -vv -s 09:00.0 | grep -A2 'Resizable BAR'` should say `current size: 16GB`.

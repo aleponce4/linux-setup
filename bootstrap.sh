@@ -62,8 +62,14 @@ fi
 if [[ $EUID -eq 0 ]]; then
   die "Run as your normal user; modules call sudo where needed."
 fi
-echo "linux-setup: sudo password needed once"
-sudo -v
+if sudo -n true 2>/dev/null; then
+  :   # passwordless sudo already available (NOPASSWD rule or a live timestamp)
+else
+  # sudo -v needs a TTY; fail clearly instead of dying on line 1 in an automated run
+  [[ -t 0 ]] || die "no passwordless sudo and no terminal to prompt on; run from a terminal, or grant NOPASSWD"
+  echo "linux-setup: sudo password needed once"
+  sudo -v
+fi
 # keep sudo alive for the duration of the run
 ( while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
 SUDO_KEEPALIVE=$!

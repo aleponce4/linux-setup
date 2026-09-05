@@ -84,6 +84,12 @@ KDE network applet > Add connection > "OpenConnect (Cisco AnyConnect)" > gateway
 
 ## Data restore from the rescue drive
 
+> **Drive layout.** The rescue drive was written from Windows with everything inside a
+> top-level `WINRESCUE\` folder, so the payload sits one level below the mount point:
+> `/mnt/winrescue/WINRESCUE/{data,wsl,secrets.7z,...}`. The paths below account for this.
+> `22-secrets.sh` accepts either layout.
+
+
 The root filesystem is ext4. `/data` is a separate Samsung 860 SSD and must be an actual mount before any
 restore begins; otherwise these commands would copy large data into the 990 PRO root filesystem. Confirm
 the mount and disk identity first:
@@ -99,16 +105,16 @@ HGST drive. Once those checks agree with [storage.md](storage.md):
 
 ```bash
 ls /mnt/winrescue/data            # Desktop Documents LIBS_Data Pictures Downloads Akodon_repo dotfiles
-rsync -avh --info=progress2 /mnt/winrescue/data/LIBS_Data/ /data/libs/
-rsync -avh --info=progress2 /mnt/winrescue/data/Desktop/Onteko/ /data/onteko/
-rsync -avh --info=progress2 /mnt/winrescue/data/Documents/Seed_LIBS_Classification/ /data/seed/Seed_LIBS_Classification/
-rsync -avh /mnt/winrescue/data/Documents/ ~/Documents/ --exclude Seed_LIBS_Classification
-rsync -avh /mnt/winrescue/data/Pictures/ ~/Pictures/
-rsync -avh /mnt/winrescue/data/dotfiles/.claude/projects/ ~/.claude/projects/      # Claude Code memory per project
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/LIBS_Data/ /data/libs/
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/Desktop/Onteko/ /data/onteko/
+rsync -avh --info=progress2 /mnt/winrescue/WINRESCUE/data/Documents/Seed_LIBS_Classification/ /data/seed/Seed_LIBS_Classification/
+rsync -avh /mnt/winrescue/WINRESCUE/data/Documents/ ~/Documents/ --exclude Seed_LIBS_Classification
+rsync -avh /mnt/winrescue/WINRESCUE/data/Pictures/ ~/Pictures/
+rsync -avh /mnt/winrescue/WINRESCUE/data/dotfiles/.claude/projects/ ~/.claude/projects/      # Claude Code memory per project
 # secrets: extract secrets.7z into ~/.ssh (chmod 600 id_ed25519) and ~/.claude/.credentials.json etc.
 ```
 
-Old WSL home, if something is missing: `sudo mkdir /srv/wsl && sudo tar -xpf /mnt/winrescue/wsl/ubuntu-2404.tar -C /srv/wsl --numeric-owner`, then browse `/srv/wsl/home/alex_ubuntu`.
+Old WSL home, if something is missing: `sudo mkdir /srv/wsl && sudo tar -xpf /mnt/winrescue/WINRESCUE/wsl/ubuntu-2404.tar -C /srv/wsl --numeric-owner`, then browse `/srv/wsl/home/alex_ubuntu`.
 
 ## Restoring from restic
 

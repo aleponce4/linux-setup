@@ -98,6 +98,9 @@ check "Shell: starship zoxide fzf rg fd bat eza lazygit tmux ghostty" bash -c "f
 check "Shell: yazi lazydocker glow fastfetch btop direnv" bash -c "for t in yazi lazydocker glow fastfetch btop direnv; do command -v \$t >/dev/null || exit 1; done"
 check "Shell: ssh-agent user service"        systemctl --user is-active --quiet ssh-agent.service
 check "Font: JetBrainsMono Nerd Font + Inter" bash -c "fc-list | grep -qi 'JetBrainsMono Nerd' && fc-list | grep -qi 'Inter'"
+check "Desktop: Plasma core (plasma-desktop, plasma-workspace, kwin-wayland, sddm)" \
+  bash -c "for p in plasma-desktop plasma-workspace kwin-wayland sddm; do dpkg -s \$p >/dev/null 2>&1 || exit 1; done"
+check "Desktop: graphical target + sddm enabled" bash -c "[[ \$(systemctl get-default) == graphical.target ]] && systemctl is-enabled --quiet sddm"
 check "Desktop: flathub remote"              bash -c "flatpak remote-list | grep -q flathub"
 check "Desktop: Speech Note, Mark Text, Obsidian flatpaks" bash -c "flatpak info net.mkiol.SpeechNote && flatpak info com.github.marktext.marktext && flatpak info md.obsidian.Obsidian"
 check "Desktop: Chrome default browser, Zoom" bash -c "xdg-settings get default-web-browser | grep -qi chrome && command -v zoom"

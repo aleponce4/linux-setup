@@ -28,6 +28,8 @@ libgmp-dev
 libmpfr-dev
 python3-tk
 tk-dev
-pymol
 pandoc
 texinfo
+
+# --- deliberately removed (lean setup, 2026-09-04) ---
+# pymol   molecular viewer; not needed
