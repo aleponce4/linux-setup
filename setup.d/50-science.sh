@@ -16,7 +16,16 @@ apt_install r-base r-base-dev
 if ! dpkg -l r-cran-bspm 2>/dev/null | grep -q '^ii'; then
   R2U="https://raw.githubusercontent.com/eddelbuettel/r2u/master/inst/scripts/add_cranapt_${R_CRAN_CODENAME}.sh"
   if curl -fsI "$R2U" >/dev/null 2>&1; then
-    curl -fsSL "$R2U" | sudo bash >/dev/null 2>&1 && log "r2u + bspm configured" || warn "r2u setup script failed; R packages will compile from source"
+    # Keep the output: when this fails, every R package compiles from source instead of
+    # installing as a binary, which turns minutes into hours. A silent warning hides why.
+    r2u_log="${LOG_DIR:-/tmp}/r2u-setup.log"
+    if curl -fsSL "$R2U" | sudo bash >"$r2u_log" 2>&1; then
+      log "r2u + bspm configured"
+    else
+      warn "r2u setup failed (R packages will compile from source); last lines of $r2u_log:"
+      tail -n 15 "$r2u_log" | sed 's/^/    /' | tee -a "$RUN_LOG" >&2
+      warn "re-runnable on its own: curl -fsSL $R2U | sudo bash"
+    fi
   else
     warn "no r2u script for $R_CRAN_CODENAME yet; R packages will compile from source (slow but works)"
   fi
