@@ -125,6 +125,9 @@ if have kwriteconfig6; then
 
   # ---- window rules: apps open on their workspace (needs the desktop ids KWin generates after reconfigure) ----
   if [[ ! -f "$HOME/.config/kwinrulesrc" ]]; then
+    # Chrome app windows take a class derived from the host, which is what makes the
+    # side panel addressable by a rule at all: a normal window is just "google-chrome".
+    SIDE_PANEL_HOST="$(printf '%s' "${SIDE_PANEL_URL:-}" | sed -e 's|^https\?://||' -e 's|/.*$||')"
     id1="$(kreadconfig6 --file kwinrc --group Desktops --key Id_1 2>/dev/null || true)"
     id2="$(kreadconfig6 --file kwinrc --group Desktops --key Id_2 2>/dev/null || true)"
     id3="$(kreadconfig6 --file kwinrc --group Desktops --key Id_3 2>/dev/null || true)"
@@ -132,8 +135,8 @@ if have kwriteconfig6; then
     if [[ -n "$id1" && -n "$id2" && -n "$id3" && -n "$id4" ]]; then
       cat >"$HOME/.config/kwinrulesrc" <<EOF
 [General]
-count=5
-rules=ls-vertical-dock,ls-code,ls-web,ls-science,ls-comm
+count=7
+rules=ls-vertical-dock,ls-side-panel,ls-spotify-vertical,ls-code,ls-web,ls-science,ls-comm
 
 [ls-code]
 Description=linux-setup: editors and terminals on CODE
@@ -161,19 +164,49 @@ positionrule=2
 size=1080,960
 sizerule=2
 
-[ls-web]
-Description=linux-setup: browser pinned to the top half of the vertical screen, all desktops
-wmclass=google-chrome
+[ls-side-panel]
+Description=linux-setup: pinned reference site, top of the vertical screen, CODE only
+wmclass=chrome-${SIDE_PANEL_HOST}__-Default
 wmclassmatch=2
 wmclasscomplete=false
 types=1
 screen=0
 screenrule=2
-desktops=
+desktops=$id1
 desktopsrule=2
 position=0,0
-positionrule=3
+positionrule=2
 size=1080,960
+sizerule=2
+
+[ls-spotify-vertical]
+Description=linux-setup: Spotify, top of the vertical screen, WEB only
+wmclass=com.spotify.Client
+wmclassmatch=2
+wmclasscomplete=false
+types=1
+screen=0
+screenrule=2
+desktops=$id2
+desktopsrule=2
+position=0,0
+positionrule=2
+size=1080,960
+sizerule=2
+
+[ls-web]
+Description=linux-setup: normal browser windows open big on the main screen, on WEB
+wmclass=google-chrome
+wmclassmatch=2
+wmclasscomplete=false
+types=1
+desktops=$id2
+desktopsrule=2
+screen=1
+screenrule=2
+position=1300,400
+positionrule=3
+size=2000,1150
 sizerule=3
 
 [ls-science]
@@ -196,6 +229,12 @@ types=1
 EOF
       # The dock terminal is identified by its title, so it must actually be launched
       # with one. Autostart it; the ls-vertical-dock rule places it from birth.
+      if [[ -n "${SIDE_PANEL_URL:-}" && -f "$REPO_DIR/dotfiles/autostart/strix-side-panel.desktop" ]]; then
+        mkdir -p "$HOME/.config/autostart"
+        sed "s|^Exec=.*|Exec=google-chrome-stable --app=${SIDE_PANEL_URL}|" \
+          "$REPO_DIR/dotfiles/autostart/strix-side-panel.desktop" \
+          > "$HOME/.config/autostart/strix-side-panel.desktop"
+      fi
       if [[ -f "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" ]]; then
         mkdir -p "$HOME/.config/autostart"
         ln -sfn "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" \
