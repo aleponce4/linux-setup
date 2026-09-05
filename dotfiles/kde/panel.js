@@ -19,13 +19,15 @@ menu.writeConfig("icon", "start-here-kde-symbolic");
 var tasks = p.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
 tasks.writeConfig("launchers", [
-  "applications:com.mitchellh.ghostty.desktop",
-  "applications:code.desktop",
-  "applications:google-chrome.desktop",
-  "applications:org.kde.dolphin.desktop",
-  "applications:positron.desktop",
-  "applications:rstudio.desktop"
-]);
+  // Pinned = always visible, click to launch. Only apps opened constantly earn a slot;
+  // everything else is one KRunner keystroke away (Meta, then type). Chosen 2026-09-05
+  // from actual use: RStudio/Positron/Obsidian were dropped as they are launched rarely.
+  "applications:com.mitchellh.ghostty.desktop",   // terminal
+  "applications:google-chrome.desktop",           // browser
+  "applications:code.desktop",                    // editor
+  "applications:org.kde.dolphin.desktop",         // file manager
+  "applications:com.spotify.Client.desktop"       // music
+].join(","));
 tasks.writeConfig("groupingStrategy", 0);
 tasks.writeConfig("middleClickAction", "NewInstance");
 tasks.writeConfig("showOnlyCurrentScreen", false);
