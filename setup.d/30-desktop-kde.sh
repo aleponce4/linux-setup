@@ -240,10 +240,12 @@ EOF
         rm -rf "$HOME/.cache/kwin/qmlcache" 2>/dev/null || true
         kwriteconfig6 --file kwinrc --group Plugins --key strix-roaming-browserEnabled true
       fi
-      if [[ -f "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" ]]; then
+      # Link every autostart entry the repo tracks, so adding one is a file, not a code edit.
+      if compgen -G "$REPO_DIR/dotfiles/autostart/*.desktop" >/dev/null; then
         mkdir -p "$HOME/.config/autostart"
-        ln -sfn "$REPO_DIR/dotfiles/autostart/strix-vertical-dock.desktop" \
-                "$HOME/.config/autostart/strix-vertical-dock.desktop"
+        for _autostart in "$REPO_DIR"/dotfiles/autostart/*.desktop; do
+          ln -sfn "$_autostart" "$HOME/.config/autostart/$(basename "$_autostart")"
+        done
       fi
       qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
       log "window rules written (System Settings > Window Management > Window Rules to adjust)"

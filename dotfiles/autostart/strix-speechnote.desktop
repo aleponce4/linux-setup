@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Speech Note (dictation daemon)
+Comment=Dictation backend; must be running for the Pause hotkey and dictate-toggle to work
+Exec=flatpak run net.mkiol.SpeechNote
+Icon=audio-input-microphone
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
