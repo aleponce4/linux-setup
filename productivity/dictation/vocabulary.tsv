@@ -2,50 +2,25 @@
 # productivity/bin/dictation-rules-apply.
 #
 # TAB-separated:  name <TAB> regex pattern <TAB> replacement
-# PCRE, applied to the STT transcript. Anchor with \b so ordinary English is
-# not rewritten. (?i) makes the match case-insensitive.
 #
-# KEEP THIS LIST SHORT. Speech Note silently discards rules past roughly thirty
-# and writes empty entries in their place; 42 became 34 with 3 blanks. Prefer
-# genuine mishearings over cosmetic capitalisation, which Whisper usually gets
-# right on its own.
+# KEEP THIS LIST SMALL. Speech Note corrupts long rule lists: writing 28 rules
+# verified fine and survived three restarts, but opening the Rules page in the
+# GUI left 7 intact and 9 replaced by empty entries. The corruption is not
+# pattern-specific - BUSCO was emptied while the near-identical LIBS survived.
+# Around a dozen rules has proven stable. Prefer terms that are misheard often
+# and matter; a better STT model fixes more than a long rule list does.
 #
 # Mined from ~/work and /data on 2026-09-06.
 
-# --- projects and organisations: the highest-value corrections ---
-Onteko	(?i)\b(?:enteckel|unteco|untecko|untecco|on ?teco|and ?teco|antico)\b	Onteko
+Onteko	(?i)\b(?:enteckel|unteco|unteko|untecko|untecco|onteco|on ?teco|and ?teco|antico|anteco)\b	Onteko
 ProLIBSpector	(?i)\bpro ?libs?[ -]?spector\b	ProLIBSpector
 Akodon	(?i)\b(?:a ?codon|acadon|a ?cotton|arcadon)\b	Akodon
 Bell_Seed	(?i)\bbell[ _-]?(?:seat|seed)\b	Bell_Seed
 CVAT	(?i)\b(?:see ?vat|c ?vat|sea ?vat)\b	CVAT
-
-# --- LIBS / spectroscopy ---
 LIBS	(?i)\b(?:libbs|lib ?s|libz)\b	LIBS
 seed not seat	(?i)\bseat(?= (?:classification|libs|spectra|data|image|project|sample|targeting))	seed
-Ocean Optics	(?i)\bocean ?optics\b	Ocean Optics
-
-# --- bioinformatics tools most likely to be misheard ---
-BUSCO	(?i)\b(?:bosco|buscoe)\b	BUSCO
-GALBA	(?i)\b(?:galva|gaalba)\b	GALBA
 TSEBRA	(?i)\b(?:sebra|t ?zebra)\b	TSEBRA
-BRAKER3	(?i)\b(?:braker|breaker) ?(?:3|three)\b	BRAKER3
-InterProScan	(?i)\binter ?pro ?scan\b	InterProScan
-RepeatMasker	(?i)\brepeat ?masker\b	RepeatMasker
-samtools	(?i)\bsam ?tools\b	samtools
-nf-core	(?i)\bn ?f ?core\b	nf-core
-Snakemake	(?i)\bsnake ?make\b	Snakemake
-Nextflow	(?i)\bnext ?flow\b	Nextflow
-
-# --- species ---
-Arabidopsis	(?i)\ba ?rabid ?opsis\b	Arabidopsis
-ryegrass	(?i)\brye ?grass\b	ryegrass
-
-# --- infrastructure ---
 SLURM	(?i)\bslurp\b	SLURM
 Apptainer	(?i)\bapp ?tainer\b	Apptainer
 micromamba	(?i)\bmicro ?mamba\b	micromamba
-RStudio	(?i)\b(?:ar|are) ?studio\b	RStudio
-Tailscale	(?i)\btail ?scale\b	Tailscale
-restic	(?i)\brest ?ick?\b	restic
-renv	(?i)\b(?:ren ?v|are ?env)\b	renv
-repo not report	(?i)\brepo report\b	repo
+ryegrass	(?i)\brye ?grass\b	ryegrass

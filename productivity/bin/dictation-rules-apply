@@ -57,6 +57,8 @@ def main():
     kept = []
     for b in existing:
         f = qv.parse(qv.unescape(b))
+        if len(f) < 7:
+            continue                      # empty entry Speech Note wrote over a rule; drop it
         if not (f[2][1] or "").startswith(MARK + ":"):
             kept.append(b)
 
