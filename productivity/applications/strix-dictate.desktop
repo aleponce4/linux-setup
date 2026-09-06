@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Dictate (toggle)
+Comment=Start or stop dictation into the focused window
+Exec=/bin/sh -lc "$HOME/.local/bin/dictate-toggle"
+Icon=audio-input-microphone
+Terminal=false
+Categories=Utility;
+NoDisplay=false

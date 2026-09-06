@@ -1,0 +1,56 @@
+# Dictation corrections for Speech Note, compiled into its rules by
+# productivity/bin/dictation-rules-apply.
+#
+# TAB-separated:  name <TAB> regex pattern <TAB> replacement
+# Patterns are PCRE, applied to the STT transcript. Always anchor with \b so
+# ordinary English is not corrupted. (?i) makes the match case-insensitive.
+#
+# Mined from ~/work and /data on 2026-09-06. Add a line, re-run the script.
+
+# --- projects and organisations ---
+Onteko	(?i)\b(?:enteckel|unteco|untecko|untecco|on ?teco|and ?teco|antico|ontario tech)\b	Onteko
+ProLIBSpector	(?i)\bpro ?libs?[ -]?spector\b	ProLIBSpector
+Akodon	(?i)\b(?:a ?codon|acadon|a ?cotton|arcadon)\b	Akodon
+Bell_Seed	(?i)\bbell[ _-]?(?:seat|seed)\b	Bell_Seed
+CVAT	(?i)\b(?:see ?vat|c ?vat|sea ?vat)\b	CVAT
+
+# --- LIBS / spectroscopy ---
+LIBS	(?i)\b(?:libbs|lib ?s|libz)\b	LIBS
+seed not seat	(?i)\bseat(?= (?:classification|libs|spectra|data|image|project|sample|targeting))	seed
+NIST	(?i)\bnist\b	NIST
+spectrometer	(?i)\bspectro ?meter\b	spectrometer
+Ocean Optics	(?i)\bocean ?optics\b	Ocean Optics
+
+# --- bioinformatics tools ---
+BUSCO	(?i)\b(?:busco|bosco|buscoe)\b	BUSCO
+GALBA	(?i)\b(?:galba|galva|gaalba)\b	GALBA
+TSEBRA	(?i)\b(?:tsebra|sebra|t ?zebra)\b	TSEBRA
+BRAKER3	(?i)\b(?:braker|breaker) ?(?:3|three)\b	BRAKER3
+InterProScan	(?i)\binter ?pro ?scan\b	InterProScan
+RepeatMasker	(?i)\brepeat ?masker\b	RepeatMasker
+AUGUSTUS	(?i)\baugustus\b	AUGUSTUS
+QUAST	(?i)\bquast\b	QUAST
+Supernova	(?i)\bsupernova\b	Supernova
+samtools	(?i)\bsam ?tools\b	samtools
+nf-core	(?i)\bn\.? ?f\.? ?core\b	nf-core
+Snakemake	(?i)\bsnake ?make\b	Snakemake
+Nextflow	(?i)\bnext ?flow\b	Nextflow
+
+# --- species ---
+Arabidopsis	(?i)\ba ?rabid ?opsis\b	Arabidopsis
+ryegrass	(?i)\brye ?grass\b	ryegrass
+
+# --- infrastructure and tooling ---
+SLURM	(?i)\b(?:slurm|slurp)\b	SLURM
+ISAAC	(?i)\bisaac\b	ISAAC
+Apptainer	(?i)\bapp ?tainer\b	Apptainer
+Singularity	(?i)\bsingularity\b	Singularity
+micromamba	(?i)\bmicro ?mamba\b	micromamba
+Quarto	(?i)\bquartos?\b	Quarto
+RStudio	(?i)\b(?:ar|are) ?studio\b	RStudio
+Positron	(?i)\bpositron\b	Positron
+Tailscale	(?i)\btail ?scale\b	Tailscale
+restic	(?i)\brest ?ick?\b	restic
+renv	(?i)\b(?:ren ?v|are ?env)\b	renv
+Shiny	(?i)\bshiny(?= app)\b	Shiny
+repo not report	(?i)\brepo report\b	repo

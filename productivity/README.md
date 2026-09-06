@@ -95,3 +95,31 @@ python3 scripts/build-productivity-cheatsheet.py
 
 The generated files are `output/html/strix-productivity-cheatsheet.html` (opened by Meta+/ and the launcher entry in a chromeless browser window; `strix-cheatsheet --pdf` opens the print version) and `output/pdf/strix-productivity-cheatsheet.pdf`. The builder fails if a card overflows
 its page so a content edit cannot silently produce a clipped reference sheet.
+
+### Dictation vocabulary
+
+Speech Note transcribes ordinary English well but mangles project and tool names:
+`Onteko` becomes "Enteckel", `seed classification` becomes "seat classification".
+Its rules engine fixes these after recognition, but it has no import and adding
+several dozen by hand in the GUI is not practical.
+
+`dictation/vocabulary.tsv` is the source of truth — three tab-separated columns,
+`name / regex / replacement`. Edit it, then:
+
+```bash
+./productivity.sh doctor dictation     # confirm the plumbing is healthy
+dictation-rules-apply                  # compile into Speech Note's rules
+```
+
+The script closes Speech Note first (it rewrites its config on exit), preserves
+the built-in example rules, replaces only entries it wrote previously, and backs
+up the config each run. It is idempotent.
+
+Terms were mined from `~/work` and `/data`: LIBS and spectroscopy vocabulary,
+the bioinformatics toolchain (BUSCO, GALBA, TSEBRA, BRAKER3, InterProScan),
+species names, and infrastructure (SLURM, ISAAC, Apptainer, micromamba).
+
+Two format details cost real time and are documented in `dictation/qvariant.py`:
+rules are Qt `@Variant()` blobs with UTF-16BE strings, and `(`, `)`, `,` must be
+escaped as `\xNN` — left raw they terminate the value and QSettings silently
+drops every rule after the first offending one.

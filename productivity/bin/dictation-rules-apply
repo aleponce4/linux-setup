@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Compile productivity/dictation/vocabulary.tsv into Speech Note's rules.
+
+Speech Note has no rule import, and adding dozens by hand in the GUI is not
+practical. Its rules live in settings.conf as Qt @Variant() blobs: a
+QVariantList of seven fields (target, type, description, pattern, replacement,
+language, name), strings UTF-16BE.
+
+Two things make this fiddly and are handled in qvariant.py:
+  * '(' ')' and ',' must be escaped as \\xNN. Left raw they terminate the
+    @Variant(...) value and QSettings silently drops every later rule.
+  * Speech Note rewrites settings.conf on exit, so it must not be running.
+
+Built-in example rules are preserved; only entries this script previously
+wrote are replaced, identified by the marker in their description field.
+"""
+import os, subprocess, sys, time, importlib.util
+
+HERE = os.path.dirname(os.path.realpath(__file__))   # realpath: this is run via a symlink in ~/.local/bin
+REPO = os.path.dirname(HERE)
+CONF = os.path.expanduser(
+    "~/.var/app/net.mkiol.SpeechNote/config/net.mkiol/dsnote/settings.conf")
+VOCAB = os.path.join(REPO, "dictation", "vocabulary.tsv")
+MARK = "linux-setup"          # description marker identifying our rules
+TARGET_STT, TYPE_REGEX = 32, 2
+
+spec = importlib.util.spec_from_file_location(
+    "qv", os.path.join(REPO, "dictation", "qvariant.py"))
+qv = importlib.util.module_from_spec(spec); spec.loader.exec_module(qv)
+
+
+def read_vocab():
+    rows = []
+    for ln, line in enumerate(open(VOCAB), 1):
+        line = line.rstrip("\n")
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) != 3:
+            sys.exit("%s:%d: expected 3 tab-separated fields, got %d" % (VOCAB, ln, len(parts)))
+        rows.append(tuple(p.strip() for p in parts))
+    return rows
+
+
+def main():
+    if not os.path.exists(CONF):
+        sys.exit("Speech Note config not found; launch it once first:\n  %s" % CONF)
+    if subprocess.run(["pgrep", "-x", "dsnote"], capture_output=True).returncode == 0:
+        print("Speech Note is running; closing it so it cannot overwrite the config")
+        subprocess.run(["pkill", "-x", "dsnote"])
+        time.sleep(4)
+
+    lines = open(CONF).read().splitlines()
+    idx = next((i for i, l in enumerate(lines) if l.startswith("trans_rules=")), None)
+    existing = qv.split_blobs(lines[idx].split("=", 1)[1]) if idx is not None else []
+
+    kept = []
+    for b in existing:
+        f = qv.parse(qv.unescape(b))
+        if MARK not in (f[2][1] or ""):
+            kept.append(b)
+
+    rows = read_vocab()
+    new = [qv.escape(qv.build(TARGET_STT, TYPE_REGEX, MARK, pat, rep, None, name))
+           for name, pat, rep in rows]
+
+    value = "trans_rules=" + ", ".join('"@Variant(%s)"' % b for b in kept + new)
+    if idx is None:
+        lines.append(value)
+    else:
+        lines[idx] = value
+    if not any(l.startswith("trans_rules_enabled=") for l in lines):
+        lines.append("trans_rules_enabled=true")
+    else:
+        lines = [("trans_rules_enabled=true" if l.startswith("trans_rules_enabled=") else l)
+                 for l in lines]
+
+    backup = CONF + ".bak-" + time.strftime("%Y%m%d-%H%M%S")
+    os.replace(CONF, backup)
+    open(CONF, "w").write("\n".join(lines) + "\n")
+    print("kept %d built-in rule(s), wrote %d from vocabulary.tsv" % (len(kept), len(new)))
+    print("backup: %s" % backup)
+    print("Start Speech Note and check Settings > Rules.")
+
+
+if __name__ == "__main__":
+    main()

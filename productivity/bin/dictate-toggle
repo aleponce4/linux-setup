@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# dictate-toggle - start or stop dictation into whatever window has focus.
+#
+# Bound to a single key so it behaves like a push-to-talk: press to start talking,
+# press again to stop. KDE global shortcuts only fire on key *press*, so a true
+# hold-to-talk is not expressible; a toggle is.
+#
+# start-listening-active-window is the action that types into the focused window
+# rather than into Speech Note's own text area.
+set -uo pipefail
+APP=net.mkiol.SpeechNote
+run() { flatpak run --command=dsnote "$APP" "$@" 2>/dev/null; }
+
+# Task state is 0 when idle. Anything else means a task (listening) is in progress.
+state="$(run --print-state task | tail -n1 | tr -d '[:space:]')"
+
+if [[ "${state:-0}" == "0" ]]; then
+    run --action start-listening-active-window
+    command -v notify-send >/dev/null && notify-send -t 1200 -i audio-input-microphone "Dictation" "Listening…"
+else
+    run --action stop-listening
+    command -v notify-send >/dev/null && notify-send -t 1200 -i audio-input-microphone "Dictation" "Stopped"
+fi
