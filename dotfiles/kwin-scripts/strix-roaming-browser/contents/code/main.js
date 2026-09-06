@@ -5,6 +5,11 @@
 // distinct window class (every normal Chrome window reports "google-chrome", so class
 // matching cannot separate a side window from a main one).
 //
+// The flag lives on the window, not on disk, so it is lost whenever KWin restarts (logout,
+// crash, kwin --replace) even though the script itself is still enabled. adopt() below
+// re-establishes it: if no browser window is marked, the oldest one is claimed. Exactly one
+// is ever adopted, so side windows opened later stay ordinary.
+//
 // Chrome applies geometry changes asynchronously: reading frameGeometry back in the same
 // tick still shows the old value. Do not "verify" inline and conclude it failed.
 
@@ -14,6 +19,22 @@ var SLOTS = {
     "WEB":  { output: "HDMI-A-3", maximized: true }
 };
 var BROWSER = /^google-chrome$/;
+
+function browsers() {
+    return workspace.windowList().filter(function (w) {
+        return w.normalWindow && BROWSER.test(w.resourceClass);
+    });
+}
+
+// Ensure one browser window carries the marker. Returns true if one is marked.
+function adopt() {
+    var all = browsers();
+    var marked = all.filter(function (w) { return w.onAllDesktops; });
+    if (marked.length > 0) { return true; }
+    if (all.length === 0) { return false; }
+    all[0].onAllDesktops = true;    // oldest window in the list
+    return true;
+}
 
 function place() {
     var name = workspace.currentDesktop.name;
@@ -40,5 +61,14 @@ function place() {
     });
 }
 
-workspace.currentDesktopChanged.connect(place);
-place();
+function refresh() {
+    if (adopt()) { place(); }
+}
+
+workspace.currentDesktopChanged.connect(refresh);
+// Chrome may start after KWin (login ordering, or a restart while logged in): adopt the
+// first browser window that appears if nothing is marked yet.
+workspace.windowAdded.connect(function (w) {
+    if (w.normalWindow && BROWSER.test(w.resourceClass)) { refresh(); }
+});
+refresh();
