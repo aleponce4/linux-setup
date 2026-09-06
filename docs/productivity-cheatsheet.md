@@ -170,3 +170,30 @@ Stop if a mount check fails. A plain `/data` or `/backup` directory on root is n
 - **No blind paste** - Read AI-generated commands before pressing Enter.
 - **No auto-submit** - Voice and clipboard helpers stop before execution.
 - **No duplicate stack** - One launcher, one tiler, one dictation daemon.
+
+## Never hand-edit `~/.config/kglobalshortcutsrc`
+
+Bind keys through **System Settings > Keyboard > Shortcuts**, not by editing the file.
+
+Two reasons, the second discovered the hard way on 2026-09-06:
+
+1. It does not work. kglobalaccel holds the file in memory and rewrites it on exit, so an
+   edit made while Plasma is running is discarded. A binding written by hand appears in the
+   file, does nothing, and vanishes at next restart.
+
+2. It can take down the whole session. A key sequence kglobalaccel cannot parse aborts
+   **KWin**, and on Wayland KWin is the display server -- every window closes at once. The
+   backtrace is unambiguous:
+
+       operator>>(const QDBusArgument&, QKeySequence&)   libKF6GlobalAccel
+       QDBusArgument::operator>>(int&)                   libQt6DBus
+       _dbus_warn_check_failed -> abort                  libdbus
+
+   libdbus calls abort() on a bad argument type instead of rejecting the message, so an
+   unparseable shortcut is fatal rather than ignored. This is a KDE/libdbus bug, but the
+   practical consequence is ours: use the GUI.
+
+Symptom if it happens: apps log `Error reading events from display: Broken pipe`, KWin
+dumps core (`coredumpctl list | grep kwin`), and the session reappears with windows lost.
+Config survives; in-memory window state (such as the roaming browser's all-desktops marker)
+does not.
