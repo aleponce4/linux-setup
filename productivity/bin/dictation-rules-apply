@@ -21,7 +21,7 @@ REPO = os.path.dirname(HERE)
 CONF = os.path.expanduser(
     "~/.var/app/net.mkiol.SpeechNote/config/net.mkiol/dsnote/settings.conf")
 VOCAB = os.path.join(REPO, "dictation", "vocabulary.tsv")
-MARK = "linux-setup"          # description marker identifying our rules
+MARK = "linux-setup"          # description prefix: identifies our rules AND labels them in the GUI
 TARGET_STT, TYPE_REGEX = 32, 2
 
 spec = importlib.util.spec_from_file_location(
@@ -57,11 +57,13 @@ def main():
     kept = []
     for b in existing:
         f = qv.parse(qv.unescape(b))
-        if MARK not in (f[2][1] or ""):
+        if not (f[2][1] or "").startswith(MARK + ":"):
             kept.append(b)
 
     rows = read_vocab()
-    new = [qv.escape(qv.build(TARGET_STT, TYPE_REGEX, MARK, pat, rep, None, name))
+    # Speech Note's rule list shows the description, not the name, so the marker has to
+    # be a prefix on a readable label or every rule reads "linux-setup" and is unusable.
+    new = [qv.escape(qv.build(TARGET_STT, TYPE_REGEX, "%s: %s" % (MARK, name), pat, rep, None, name))
            for name, pat, rep in rows]
 
     value = "trans_rules=" + ", ".join('"@Variant(%s)"' % b for b in kept + new)
