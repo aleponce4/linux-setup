@@ -63,7 +63,11 @@ def main():
     rows = read_vocab()
     # Speech Note's rule list shows the description, not the name, so the marker has to
     # be a prefix on a readable label or every rule reads "linux-setup" and is unusable.
-    new = [qv.escape(qv.build(TARGET_STT, TYPE_REGEX, "%s: %s" % (MARK, name), pat, rep, None, name))
+    # Match the built-in example rules' field shape exactly: description populated,
+    # language "en", name NULL. Rules written with a populated name field and a null
+    # language did not survive Speech Note's own rewrite - it blanked them one by one
+    # across restarts. The built-ins have never broken, so copy them.
+    new = [qv.escape(qv.build(TARGET_STT, TYPE_REGEX, "%s: %s" % (MARK, name), pat, rep, "en", None))
            for name, pat, rep in rows]
 
     value = "trans_rules=" + ", ".join('"@Variant(%s)"' % b for b in kept + new)
