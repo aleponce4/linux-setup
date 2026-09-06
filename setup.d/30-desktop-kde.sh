@@ -47,6 +47,20 @@ if [[ "${ENABLE_VM_STACK:-no}" == "yes" ]]; then
   usergroup_add libvirt; usergroup_add kvm; systemd_enable_now libvirtd
 fi
 
+# ---- Logitech K350: make the dead app-switcher key bindable ----
+# The key reports KEY_APPSELECT (evdev 580), above the 255 xkb ceiling, so it has
+# no keysym and KDE cannot bind it. Remap it to F19. See the header of the hwdb
+# file for why F13 is the wrong target (inet(evdev) turns it into XF86Tools).
+k350_hwdb="$REPO_DIR/productivity/udev/70-k350-appselect.hwdb"
+if [[ -f "$k350_hwdb" ]]; then
+  if ! sudo cmp -s "$k350_hwdb" /etc/udev/hwdb.d/70-k350-appselect.hwdb 2>/dev/null; then
+    write_file_sudo /etc/udev/hwdb.d/70-k350-appselect.hwdb 0644 <"$k350_hwdb"
+    sudo udevadm hwdb --update || true
+    sudo udevadm trigger --subsystem-match=input --action=change || true
+    log "K350 app-switcher key remapped to F19"
+  fi
+fi
+
 # ---- dictation backend: ydotool daemon as a user service ----
 if [[ "${ENABLE_DICTATION:-yes}" == "yes" ]]; then
   productivity_override="$HOME/.config/systemd/user/ydotool.service.d/productivity.conf"

@@ -1,0 +1,18 @@
+# Logitech K350: remap the app-switcher key (left of right Ctrl) to F19.
+#
+# The key reports KEY_APPSELECT, evdev keycode 580. X11 and xkb cannot represent
+# keycodes above 255, so it has no keysym and KDE cannot bind it at all - the key
+# simply does nothing.
+#
+# F13 looks like the obvious target but is a trap: xkb keycode 191 (<FK13>) is
+# overridden by symbols/inet(evdev), which every default model pulls in, to the
+# keysym XF86Tools. KDE therefore never sees "F13" - it sees a vendor
+# "launch config tool" key and pops up System Settings instead of running the
+# bound shortcut. Of <FK13>..<FK24>, only <FK19> and <FK24> escape inet(evdev)
+# and survive as plain F19 / F24 keysyms. F19 = evdev keycode 189.
+#
+# Scancode 0xc01a2 = HID consumer page usage 0x1A2 (Show All Applications).
+# Remove this file and re-run `sudo udevadm hwdb --update` to restore stock behaviour.
+
+evdev:input:b0003v046Dp200A*
+ KEYBOARD_KEY_c01a2=f19
