@@ -3,3 +3,4 @@ net.mkiol.SpeechNote
 com.spotify.Client
 com.github.marktext.marktext
 md.obsidian.Obsidian
+com.bitwarden.desktop

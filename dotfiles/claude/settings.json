@@ -1,5 +1,5 @@
 {
-  "model": "claude-fable-5-1[1m]",
-  "effortLevel": "low",
+  "model": "opus[1m]",
+  "effortLevel": "max",
   "agentPushNotifEnabled": true
 }
