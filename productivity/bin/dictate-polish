@@ -24,7 +24,7 @@ export YDOTOOL_SOCKET="${YDOTOOL_SOCKET:-/run/user/$(id -u)/ydotool/socket}"
 
 APP=net.mkiol.SpeechNote
 MAX_WAIT="${DICTATE_MAX_WAIT:-180}"      # seconds of dictation before giving up
-LLM_HOST="${DICTATE_LLM_HOST:-http://127.0.0.1:8080}"
+LLM_HOST="${DICTATE_LLM_HOST:-http://127.0.0.1:11434}"
 LLM_TIMEOUT="${DICTATE_LLM_TIMEOUT:-20}"
 run() { flatpak run --command=dsnote "$APP" "$@" 2>/dev/null; }
 note() { command -v notify-send >/dev/null && notify-send -t "${2:-1500}" -i audio-input-microphone "Dictation" "$1" || true; }

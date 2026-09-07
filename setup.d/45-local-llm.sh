@@ -19,7 +19,10 @@ apt_install_list "$LISTS_DIR/apt-llm.txt"
 LLM_MODEL_DIR="${LLM_MODEL_DIR:-$HOME/.local/share/llama/models}"
 LLM_MODEL_FILE="${LLM_MODEL_FILE:-Qwen3-4B-Instruct-2507-Q5_K_M.gguf}"
 LLM_MODEL_URL="${LLM_MODEL_URL:-https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/$LLM_MODEL_FILE}"
-LLM_PORT="${LLM_PORT:-8080}"
+# 11434, not 8080: CVAT's traefik binds 8080 and documents it as its default, and the two
+# collided the first time this ran ("failed to bind host port 0.0.0.0:8080: address already
+# in use"). 11434 is the conventional local-LLM port and is clear of web tooling.
+LLM_PORT="${LLM_PORT:-11434}"
 
 mkdir -p "$LLM_MODEL_DIR"
 if [[ -s "$LLM_MODEL_DIR/$LLM_MODEL_FILE" ]]; then

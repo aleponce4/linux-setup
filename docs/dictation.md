@@ -130,7 +130,7 @@ keeps tools disabled without losing auth.
 
 `dictate-polish` now tries a **local** model first and falls back to Claude.
 
-    llama-server (systemd --user)  ->  127.0.0.1:8080  ->  Qwen3-4B-Instruct-2507-Q5_K_M
+    llama-server (systemd --user)  ->  127.0.0.1:11434  ->  Qwen3-4B-Instruct-2507-Q5_K_M
     37/37 layers on the Arc B570 via Vulkan, ~4.2 GB of 10 GB VRAM
 
 Installed by `setup.d/45-local-llm.sh`. Measured against the same 35 s transcript:
