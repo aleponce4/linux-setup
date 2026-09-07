@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# github-mcp-stdio - launch the GitHub MCP server with a token fetched at start.
+#
+# The token is read from `gh auth token` each launch rather than stored in ~/.claude.json.
+# MCP config files are world-readable-ish plain JSON and get copied around; a PAT written
+# there is a secret at rest for as long as the config lives. This keeps it in process memory.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+command -v gh >/dev/null || { echo "gh not installed" >&2; exit 1; }
+token="$(gh auth token 2>/dev/null || true)"
+[[ -n "$token" ]] || { echo "gh is not authenticated; run: gh auth login" >&2; exit 1; }
+export GITHUB_PERSONAL_ACCESS_TOKEN="$token"
+exec github-mcp-server stdio "$@"

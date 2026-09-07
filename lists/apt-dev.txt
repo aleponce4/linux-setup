@@ -10,3 +10,13 @@ libsqlite3-dev
 shellcheck
 direnv
 distrobox
+
+# Agent-facing CLI tools (added 2026-09-07). These matter specifically because an agent
+# reads output rather than looking at it: structural search beats regex on big repos, and
+# machine-readable summaries beat scrolling.
+yq
+just
+hyperfine
+tokei
+sd
+procs

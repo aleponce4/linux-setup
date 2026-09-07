@@ -119,7 +119,15 @@ if ! have lazydocker; then
 fi
 
 # ---- passwordless sudo for a bounded set of admin commands (agents administer the machine) ----
-if [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]]; then
+if [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]] && \
+   sudo -n apt-get --version >/dev/null 2>&1 && sudo -n systemctl --version >/dev/null 2>&1; then
+  # The rule is already in effect. Test the EFFECT, not the file: 90-agent-admin is 0440
+  # root-only, so an unprivileged compare cannot read it and `sudo cmp` is deliberately not in
+  # the ruleset either. write_file_sudo therefore always concludes it changed and always tries
+  # to write, which prompts for a password on every single run and fails unattended ones -- on
+  # a file whose contents were already correct.
+  log "agent sudo rule already in effect; not rewriting"
+elif [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]]; then
   write_file_sudo /etc/sudoers.d/90-agent-admin 0440 <<EOF
 # linux-setup: let $TARGET_USER (and the AI agents running as that user) administer packages and services without a password.
 # A future Btrfs root may add pre-apt Timeshift snapshots; the current ext4 root relies on restic backups.

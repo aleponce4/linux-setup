@@ -1,0 +1,6 @@
+# Local LLM inference. Installed by setup.d/45-local-llm.sh
+# The Vulkan ggml backend is what puts inference on the Arc B570; without it llama.cpp
+# silently falls back to CPU and is roughly an order of magnitude slower.
+llama.cpp-tools
+libggml0-backend-vulkan
+python3-gguf

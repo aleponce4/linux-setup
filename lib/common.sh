@@ -12,8 +12,19 @@ export DEBIAN_FRONTEND=noninteractive
 # above. Every apt invocation must therefore set it explicitly on the sudo command line,
 # or packages that ask debconf questions (iperf3, ttf-mscorefonts-installer, ...) will
 # block forever on a whiptail prompt nobody is there to answer.
-APT_NI=(sudo DEBIAN_FRONTEND=noninteractive apt-get
-        -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+# Whether sudo will carry the variable at all depends on the sudoers rule: a blanket
+# NOPASSWD:ALL accepts it, but this machine grants NOPASSWD per command without SETENV, and
+# sudo then refuses outright ("you are not allowed to set the following environment
+# variables"). Probe once and drop the assignment when it is forbidden -- debconf already
+# falls back to the noninteractive frontend when there is no TTY, which is the case that
+# matters for automated runs.
+if sudo -n DEBIAN_FRONTEND=noninteractive apt-get --version >/dev/null 2>&1; then
+  APT_NI=(sudo DEBIAN_FRONTEND=noninteractive apt-get
+          -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+else
+  APT_NI=(sudo apt-get
+          -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+fi
 
 log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" | tee -a "$RUN_LOG" >&2; }
 warn() { log "WARN: $*"; }
@@ -167,7 +178,15 @@ apt_install_list() {
 # add_apt_repo NAME KEY_URL "deb [arch=amd64 signed-by=/etc/apt/keyrings/NAME.gpg] URL SUITE COMPONENTS"
 add_apt_repo() {
   local name="$1" key_url="$2" line="$3"
-  sudo install -m 0755 -d /etc/apt/keyrings
+  # Fast path for a re-run: if key and source list are already correct there is nothing to do,
+  # and taking it matters beyond speed. Every sudo call below can prompt on a machine that
+  # grants NOPASSWD per command rather than blanket, so an unconditional `sudo install` here
+  # fails an unattended run purely to re-create a directory that already exists.
+  if [[ -f "/etc/apt/keyrings/$name.gpg" && -f "/etc/apt/sources.list.d/$name.list" ]] \
+     && grep -qF "$line" "/etc/apt/sources.list.d/$name.list" 2>/dev/null; then
+    return 0
+  fi
+  [[ -d /etc/apt/keyrings ]] || sudo install -m 0755 -d /etc/apt/keyrings
   if [[ ! -f "/etc/apt/keyrings/$name.gpg" ]]; then
     curl -fsSL "$key_url" | sudo gpg --dearmor -o "/etc/apt/keyrings/$name.gpg"
     sudo chmod a+r "/etc/apt/keyrings/$name.gpg"
@@ -209,9 +228,18 @@ ensure_line() {
 
 # write_file_sudo PATH MODE <<EOF ... EOF  (only rewrites when content differs)
 write_file_sudo() {
-  local path="$1" mode="${2:-0644}" tmp
+  local path="$1" mode="${2:-0644}" tmp same=""
   tmp="$(mktemp)"; cat >"$tmp"
-  if ! sudo cmp -s "$tmp" "$path" 2>/dev/null; then
+  # Compare WITHOUT sudo where possible. `sudo cmp` is not in the per-command NOPASSWD set on
+  # this machine, so using it here made the no-change fast path prompt for a password -- the
+  # exact thing the comparison exists to avoid, and enough to fail an unattended run on a file
+  # that was already correct. Most targets under /etc are world-readable, so this covers them.
+  if [[ -r "$path" ]]; then
+    cmp -s "$tmp" "$path" && same=1
+  elif sudo -n cmp -s "$tmp" "$path" 2>/dev/null; then
+    same=1
+  fi
+  if [[ -z "$same" ]]; then
     sudo install -m "$mode" -D "$tmp" "$path"
     log "wrote $path"
   fi

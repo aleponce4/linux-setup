@@ -125,3 +125,45 @@ dictation is worse than an unpolished one.
 "Not logged in" every time. `ai-clipboard` had shipped with that flag and every one of its
 actions was silently broken. Use `--restricted --tools "" --no-session-persistence`, which
 keeps tools disabled without losing auth.
+
+## Local model for cleanup (2026-09-07)
+
+`dictate-polish` now tries a **local** model first and falls back to Claude.
+
+    llama-server (systemd --user)  ->  127.0.0.1:8080  ->  Qwen3-4B-Instruct-2507-Q5_K_M
+    37/37 layers on the Arc B570 via Vulkan, ~4.2 GB of 10 GB VRAM
+
+Installed by `setup.d/45-local-llm.sh`. Measured against the same 35 s transcript:
+
+| path | long transcript | short utterance |
+|---|---|---|
+| Claude (remote) | 5.1-6.1 s | ~2.5-4 s |
+| local, cold | 4.2 s | |
+| **local, warm** | **3.3-3.5 s** | **~1.0 s** |
+
+Most of the remote cost is a fixed 2.5-4 s network round trip before the first token, which
+is why a 4B model on a mid-range GPU beats a frontier model here. The task -- punctuation,
+filler removal -- does not need frontier capability.
+
+Claude remains the fallback, and is still the better model for the hard part: collapsing a
+self-correction into only the corrected clause.
+
+### Do not give a small model the vocabulary list
+
+The first version passed `vocabulary.tsv` as a spelling hint. Qwen3-4B then rewrote
+
+    "run the seat classification in the notebook and the Onteko repo"
+
+as `"... and the Onteko ProLIBSpector repo"` -- inserting a term nobody said. Adding an
+explicit "never insert a term the speaker did not say" rule did **not** stop it.
+
+The list is redundant anyway: Speech Note applies `vocabulary.tsv` as deterministic regex
+rules (`trans_rules`) before the text reaches the model. Removing it fixed the invention and
+made the prompt shorter, cutting a short utterance from 1.49 s to 0.98 s. Deterministic
+string replacement is the right tool for proper nouns; a language model is not.
+
+### VRAM budget
+
+Whisper Large-v3 Turbo and Qwen3-4B share the 10 GB card: llama.cpp reported 4203 MiB used
+with 3227 MiB still free, so both fit. Moving to full Whisper Large-v3 (1.08 GB) alongside is
+fine; moving the cleanup model up to 7-8B would make it tight.

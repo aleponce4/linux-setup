@@ -62,18 +62,21 @@ fi
 if [[ $EUID -eq 0 ]]; then
   die "Run as your normal user; modules call sudo where needed."
 fi
-if sudo -n true 2>/dev/null; then
-  :   # passwordless sudo already available (NOPASSWD rule or a live timestamp)
+# This machine grants NOPASSWD for specific commands (apt, dpkg, systemctl, ...) rather than
+# blanket sudo, so `sudo -n true` fails even though every command the modules actually run is
+# passwordless. Probe the real capability instead, or a headless run is refused for no reason.
+if sudo -n apt-get --version >/dev/null 2>&1 || sudo -n true 2>/dev/null; then
+  SUDO_KEEPALIVE=""   # per-command NOPASSWD, or a live timestamp: nothing to keep alive
 else
   # sudo -v needs a TTY; fail clearly instead of dying on line 1 in an automated run
   [[ -t 0 ]] || die "no passwordless sudo and no terminal to prompt on; run from a terminal, or grant NOPASSWD"
   echo "linux-setup: sudo password needed once"
   sudo -v
+  # keep the timestamp alive for the duration of the run
+  ( while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
+  SUDO_KEEPALIVE=$!
 fi
-# keep sudo alive for the duration of the run
-( while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
-SUDO_KEEPALIVE=$!
-trap 'kill $SUDO_KEEPALIVE 2>/dev/null || true' EXIT
+trap '[[ -n "${SUDO_KEEPALIVE:-}" ]] && kill "$SUDO_KEEPALIVE" 2>/dev/null || true' EXIT
 
 ts="$(date +%Y%m%d-%H%M%S)"
 RUN_LOG="$LOG_DIR/bootstrap-$ts.log"

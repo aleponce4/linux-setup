@@ -3,3 +3,4 @@
 @github/copilot
 opencode-ai
 netlify-cli
+@ast-grep/cli
