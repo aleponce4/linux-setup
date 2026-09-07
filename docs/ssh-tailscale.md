@@ -48,13 +48,41 @@ Two contributing findings:
    a browser re-authentication. If that prompt never reaches the client, the session hangs
    with no error on either side.
 
-Remediation applied: `systemctl restart tailscaled`, which rebuilds the control-plane
-connection and re-elects the DERP home.
+## Root cause, confirmed 2026-09-07
 
-If it recurs, the durable fix is in the admin console under **Access Controls**: an `ssh`
-rule with `"action": "check"` requires periodic browser re-auth. Changing it to
-`"action": "accept"` for your own devices removes the wait entirely. That policy lives in the
-tailnet, not on this machine, so it cannot be changed or even read from here.
+The tailnet ACL had `"action": "check"` on its `ssh` rule. Check mode requires browser
+re-authentication periodically; `tailscaled` long-polls `/machine/ssh/wait/` until you
+approve, which is why hangs were silent rather than errors, and why 15 of 28 connections
+succeeded -- those fell inside a still-valid re-auth window.
+
+**Plain `ssh` never showed the prompt.** That is the `error sending auth welcome message: EOF`
+in the log: tailscaled tried to send the approval URL and the client did not surface it.
+Tailscale's own client does:
+
+    /Applications/Tailscale.app/Contents/MacOS/Tailscale ssh alexponce@strix
+    # Tailscale SSH requires an additional check.
+    # To authenticate, visit: https://login.tailscale.com/a/...
+    # Authentication checked with Tailscale SSH.
+
+Approve the URL and the session starts.
+
+Restarting tailscaled was **not** the fix -- attempts against the freshly restarted daemon
+hung identically. Worth recording so the next person does not credit the restart. The DERP
+home had also latched onto London at a spurious 2710 ms sample before self-correcting to
+Dallas; real but unrelated.
+
+### Consequence: check mode breaks every tool that shells out to ssh
+
+With `check`, only clients that can display the approval URL work. These hang instead:
+
+- VS Code Remote-SSH
+- `scp`, `rsync`, `git` over ssh
+- any script or automation
+
+To use those, change the `ssh` rule in **Access Controls** to `"action": "accept"`. Tailnet
+membership plus device authentication is already the access control; `check` adds a periodic
+human confirmation on top, which suits a shared or production tailnet more than a
+single-user one.
 
 ## The second, latent problem
 
