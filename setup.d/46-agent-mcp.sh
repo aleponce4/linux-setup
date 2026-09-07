@@ -57,5 +57,17 @@ else
   warn "gh not authenticated; skipping the github MCP server (run: gh auth login, then ./bootstrap.sh 46)"
 fi
 
+# ---- skills ----
+# Symlinked, not copied, so editing a skill in the repo takes effect immediately and a skill
+# edited by mistake in ~/.claude shows up as a repo diff rather than drifting silently.
+if compgen -G "$REPO_DIR/dotfiles/claude/skills/*/SKILL.md" >/dev/null; then
+  mkdir -p "$HOME/.claude/skills"
+  for _skill in "$REPO_DIR"/dotfiles/claude/skills/*/; do
+    _name="$(basename "$_skill")"
+    ln -sfn "${_skill%/}" "$HOME/.claude/skills/$_name"
+    log "skill: $_name"
+  done
+fi
+
 log "registered MCP servers:"
 claude mcp list 2>/dev/null | sed 's/^/    /' || true
