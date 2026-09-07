@@ -167,3 +167,25 @@ string replacement is the right tool for proper nouns; a language model is not.
 Whisper Large-v3 Turbo and Qwen3-4B share the 10 GB card: llama.cpp reported 4203 MiB used
 with 3227 MiB still free, so both fit. Moving to full Whisper Large-v3 (1.08 GB) alongside is
 fine; moving the cleanup model up to 7-8B would make it tight.
+
+### Two fidelity bugs found by reviewing, not by using
+
+Both were invisible in casual use and would have quietly corrupted meaning.
+
+**Temperature.** At `temperature: 0.2` the same transcript produced different text in one run
+out of five. A typing tool that returns different words for identical input is broken even
+when each output is individually fine. Now `temperature: 0`, verified identical across runs.
+
+**Dropped hedges.** The prompt listed `"like"` and `"you know"` as filler, and the 4B model
+generalised: `"ok so um i think we should run X"` came back as `"We should run X"`. Losing
+`"I think"` turns a tentative statement into an assertion -- the opposite of preserving
+meaning, and exactly wrong for dictating research reasoning.
+
+The rule is now explicit that hedges are not filler. Verified on the long transcript: the
+self-correction still collapses to the corrected clause, `"I'm not assuming"` and `"I don't
+actually know"` both survive, nothing is invented, and a cut-off sentence stays cut off.
+
+Worth noting how this was missed the first time: the prompt was tested via curl in a condensed
+form, while the script sent a longer one. Test the artefact, not a paraphrase of it -- hence
+`DICTATE_TEST_TEXT` / `DICTATE_DRY_RUN`, which run the real script without speaking or
+stealing focus to paste.

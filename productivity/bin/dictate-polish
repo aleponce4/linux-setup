@@ -31,6 +31,15 @@ note() { command -v notify-send >/dev/null && notify-send -t "${2:-1500}" -i aud
 
 state() { run --print-state task | tail -n1 | tr -d '[:space:]'; }
 
+# Test hook. DICTATE_TEST_TEXT supplies a transcript instead of listening, and DICTATE_DRY_RUN
+# prints the result rather than pasting it. Without these the cleanup and fallback paths can
+# only be exercised by speaking, and a test that steals focus to paste into whatever window
+# happens to be active is not one anybody runs twice.
+if [[ -n "${DICTATE_TEST_TEXT:-}" ]]; then
+    raw="$DICTATE_TEST_TEXT"
+    saved_clip=""
+else
+
 # Already listening: stop, and let the in-flight run finish on its own.
 if [[ "$(state)" != "0" ]]; then
     run --action stop-listening
@@ -60,8 +69,10 @@ if [[ -z "${raw//[[:space:]]/}" ]]; then
     note "Nothing transcribed"
     exit 0
 fi
+fi   # end of the live-dictation branch
 
 paste_text() {                             # $1 = text to place and paste
+    if [[ -n "${DICTATE_DRY_RUN:-}" ]]; then printf '%s\n' "$1"; return 0; fi
     printf '%s' "$1" | wl-copy 2>/dev/null || return 1
     sleep 0.15
     ydotool key 29:1 47:1 47:0 29:0 2>/dev/null || return 1   # ctrl+v
@@ -85,7 +96,8 @@ PROMPT="You clean up dictated speech. The input is a raw speech-to-text transcri
 Return ONLY the cleaned text, with no preamble, quotes, or commentary.
 
 Rules:
-- Remove filler (\"um\", \"uh\", \"like\", \"you know\") and false starts. When the speaker corrects themselves (\"badder is worse\"), keep only the corrected version.
+- Remove filler (\"um\", \"uh\", \"er\") and false starts. When the speaker corrects themselves (\"badder is worse\"), keep only the corrected version.
+- Hedges and first-person framing are NOT filler and must survive verbatim: \"I think\", \"I guess\", \"maybe\", \"probably\". Deleting a hedge asserts something the speaker did not.
 - Add sentence breaks, capitalisation and punctuation. Keep paragraphs if the speaker pauses.
 - Preserve meaning, technical content, numbers, hedges and uncertainty exactly. Do not summarise, do not expand, do not make claims more confident than they were spoken.
 - Never add, invent or complete words the speaker did not say. If a sentence is cut off, leave it cut off.
@@ -106,7 +118,8 @@ json.dump({
         {"role": "system", "content": os.environ["PROMPT"]},
         {"role": "user",   "content": os.environ["RAW"]},
     ],
-    "temperature": 0.2,
+    "temperature": 0,   # deterministic: at 0.2 one run in five differed, and the same
+                        # dictation returning different text is a bug in a typing tool
     "max_tokens": 2048,
     "stream": False,
 }, open(sys.argv[1], "w"))
