@@ -6,10 +6,23 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
 export PATH="$HOME/.local/bin:$HOME/.local/share/fnm:$PATH"
 [[ -x "$HOME/.local/share/fnm/fnm" ]] && eval "$("$HOME/.local/share/fnm/fnm" env --shell bash)" 2>/dev/null
 
-pass=0; fail=0; rows=()
+pass=0; fail=0; skip=0; rows=()
 check() {  # check NAME COMMAND...
   local name="$1"; shift
   if "$@" >/dev/null 2>&1; then rows+=("PASS  $name"); ((pass++)); else rows+=("FAIL  $name"); ((fail++)); fi
+}
+
+# check_sudo NEEDS_CMD NAME COMMAND...
+# For checks that can only be answered as root. This machine grants NOPASSWD per command, and
+# restic/sshd are deliberately not in that set, so an unattended run cannot answer them. Report
+# SKIP rather than FAIL: a healthy nightly backup showing up as a failure trains you to ignore
+# the report, which is worse than not running the check at all.
+check_sudo() {
+  local probe="$1" name="$2"; shift 2
+  if ! sudo -n $probe >/dev/null 2>&1; then
+    rows+=("SKIP  $name (needs sudo; re-run from a terminal)"); ((skip++)); return
+  fi
+  check "$name" "$@"
 }
 ver() { "$@" 2>/dev/null | head -n1 | tr -d '\r' | cut -c1-60; }
 SHELL_WANT="${LOGIN_SHELL:-bash}"
@@ -89,8 +102,8 @@ esac
 check "Storage: zram swap active"            bash -c "swapon --show | grep -q zram"
 if [[ "${ENABLE_RESTIC:-yes}" == "yes" ]]; then
   check "Backup: restic timers enabled" bash -c "systemctl is-enabled --quiet restic-backup.timer && systemctl is-enabled --quiet restic-check.timer"
-  check "Backup: restic repository readable" restic_repository_readable
-  check "Backup: restic has snapshots" restic_repository_nonempty
+  check_sudo "restic version" "Backup: restic repository readable" restic_repository_readable
+  check_sudo "restic version" "Backup: restic has snapshots" restic_repository_nonempty
 fi
 check "Secrets: ssh key present"             test -f "$HOME/.ssh/id_ed25519"
 check "Shell: login shell is $SHELL_WANT"    bash -c "[[ \$(getent passwd $TARGET_USER | cut -d: -f7) == */$SHELL_WANT ]]"
@@ -132,8 +145,8 @@ check "R: RStudio, Positron, Quarto"         bash -c "command -v rstudio && comm
 check "R: TinyTeX"                           test -d "$HOME/.TinyTeX"
 check "Science: duckdb"                      command -v duckdb
 check "Remote: tailscale logged in"          bash -c "tailscale status 2>/dev/null | grep -q '$HOSTNAME_TARGET'"
-check "Remote: sshd active, keys only"       bash -c "systemctl is-active --quiet ssh && sudo sshd -T | grep -q 'passwordauthentication no'"
-check "Remote: fail2ban, ufw active"         bash -c "systemctl is-active --quiet fail2ban && sudo ufw status | grep -q 'Status: active'"
+check_sudo "sshd -T" "Remote: sshd active, keys only" bash -c "systemctl is-active --quiet ssh && sudo sshd -T | grep -q 'passwordauthentication no'"
+check_sudo "ufw status" "Remote: fail2ban, ufw active" bash -c "systemctl is-active --quiet fail2ban && sudo ufw status | grep -q 'Status: active'"
 check "Remote: mosh, krdp"                   bash -c "command -v mosh && dpkg -s krdp"
 [[ "${ENABLE_CRD:-yes}" == "yes" ]] && check "Remote: Chrome Remote Desktop host + session" bash -c "dpkg -s chrome-remote-desktop && test -f $HOME/.chrome-remote-desktop-session"
 check "Dotfiles: bashrc/zshrc/ghostty/ssh config linked" bash -c "[[ -L $HOME/.bashrc && -L $HOME/.zshrc && -L $HOME/.config/ghostty/config && -L $HOME/.ssh/config ]]"
@@ -142,6 +155,6 @@ check "Envs: work dir with repos"            bash -c "[[ \$(ls -1d $WORK_DIR/*/ 
 
 printf '\n%s\n' "== linux-setup verify ($(date +%F' '%H:%M)) =="
 printf '%s\n' "${rows[@]}"
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
+printf '\n%d passed, %d failed%s\n' "$pass" "$fail" "$( ((skip)) && printf ', %d skipped' "$skip" )"
 printf 'versions: kernel %s | %s | %s | %s | %s | %s\n' "$(uname -r)" "$(ver code --version)" "$(ver Rscript --version)" "$(ver docker --version)" "$(ver uv --version)" "$(ver claude --version)"
 (( fail == 0 ))
