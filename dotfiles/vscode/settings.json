@@ -47,5 +47,6 @@
     "files.associations": {
         "renv.lock": "json"
     },
-    "editor.fontSize": 16
+    "editor.fontSize": 16,
+    "claudeCode.hideOnboarding": true
 }

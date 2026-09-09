@@ -1,0 +1,18 @@
+[Unit]
+Description=Persistent tmux session for remote administration
+Documentation=file:///home/alexponce/linux-setup/docs/remote-access.md
+After=default.target
+
+[Service]
+# Type=forking because `tmux new-session -d` daemonises; RemainAfterExit keeps the unit
+# "active" so `systemctl --user status` reflects the session's existence rather than the
+# exit of the tmux client that created it.
+Type=forking
+RemainAfterExit=yes
+# bash -lc, not the binary directly: claude and node live in fnm's tree and are not on the
+# default systemd PATH. A non-login shell here silently produces a session without claude.
+ExecStart=/bin/bash -lc 'tmux has-session -t strix 2>/dev/null || tmux new-session -d -s strix -c %h/linux-setup -n shell'
+ExecStop=/bin/bash -lc 'tmux kill-session -t strix 2>/dev/null || true'
+
+[Install]
+WantedBy=default.target

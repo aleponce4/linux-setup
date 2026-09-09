@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# strix-remote - attach to the persistent administration session, creating it if needed.
+#
+# The point is that this session outlives the SSH connection AND the desktop session. If
+# Plasma dies, or the link drops mid-repair, the work carries on inside tmux and you attach
+# again to exactly where you were. That matters most in precisely the situation you would
+# need it -- the machine half-broken and you not in front of it.
+#
+# `claude` resolves only from a login shell: it lives in fnm's node-versions tree, not on the
+# default PATH. Every invocation here goes through `bash -lc` for that reason.
+set -uo pipefail
+SESSION="${STRIX_SESSION:-strix}"
+WORKDIR="${STRIX_WORKDIR:-$HOME/linux-setup}"
+
+tmux has-session -t "$SESSION" 2>/dev/null || \
+  tmux new-session -d -s "$SESSION" -c "$WORKDIR" -n shell
+
+# A window with Claude ready. If claude exits for any reason, fall back to a login shell
+# rather than letting the window close and lose the pane.
+if ! tmux list-windows -t "$SESSION" -F '#{window_name}' 2>/dev/null | grep -qx claude; then
+  tmux new-window -t "$SESSION" -n claude -c "$WORKDIR" \
+    'bash -lc "claude || { echo; echo \"claude exited - dropping to a shell\"; exec bash -l; }"'
+  tmux select-window -t "$SESSION:shell" 2>/dev/null || true
+fi
+
+if [[ -n "${TMUX:-}" ]]; then
+  echo "already inside tmux; use: tmux switch-client -t $SESSION" >&2
+  exit 1
+fi
+exec tmux attach -t "$SESSION"

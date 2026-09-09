@@ -145,6 +145,28 @@ check "R: RStudio, Positron, Quarto"         bash -c "command -v rstudio && comm
 check "R: TinyTeX"                           test -d "$HOME/.TinyTeX"
 check "Science: duckdb"                      command -v duckdb
 check "Remote: tailscale logged in"          bash -c "tailscale status 2>/dev/null | grep -q '$HOSTNAME_TARGET'"
+# --- session-collision guards (added after the 2026-09-09 outage) ---
+# A second Plasma session (X11) alongside the Wayland one makes the standalone kglobalacceld
+# fight KWin for the org.kde.kglobalaccel D-Bus name and restart forever, which starves the
+# whole session. Catch the cause and the symptom separately.
+check "Session: no X11 Plasma alongside Wayland" \
+  bash -c '! (pgrep -x kwin_wayland >/dev/null && pgrep -x kwin_x11 >/dev/null)'
+check "Session: Chrome Remote Desktop not enabled" \
+  bash -c '[[ "$(systemctl is-enabled chrome-remote-desktop@'"$USER"'.service 2>/dev/null)" != "enabled" ]]'
+# Window this to the recent past, not the whole boot: a storm that was already diagnosed and
+# fixed should not keep the check red until the next reboot. What matters is whether one is
+# happening NOW.
+check "Session: no user unit in a restart storm" \
+  bash -c 'n=$(journalctl --user --since "-10 min" --no-pager 2>/dev/null | grep -c "Scheduled restart job"); [[ "${n:-0}" -lt 10 ]]'
+check "Session: plasmashell running" pgrep -x plasmashell
+check "Session: desktop portal active" \
+  bash -c 'systemctl --user is-active --quiet plasma-xdg-desktop-portal-kde.service'
+check "Remote: KRDP listening on 3389" bash -c 'ss -lnt | grep -q ":3389 "'
+check "Remote: RDP denied on the wired LAN" \
+  bash -c 'sudo -n ufw status 2>/dev/null | grep -q "3389/tcp on enp6s0 *DENY"'
+check "Remote: persistent admin tmux session" bash -c 'tmux has-session -t strix 2>/dev/null'
+check "Remote: linger on (user units survive logout)" \
+  bash -c '[[ "$(loginctl show-user '"$USER"' -p Linger --value 2>/dev/null)" == "yes" ]]'
 check_sudo "sshd -T" "Remote: sshd active, keys only" bash -c "systemctl is-active --quiet ssh && sudo sshd -T | grep -q 'passwordauthentication no'"
 check_sudo "ufw status" "Remote: fail2ban, ufw active" bash -c "systemctl is-active --quiet fail2ban && sudo ufw status | grep -q 'Status: active'"
 check "Remote: mosh, krdp"                   bash -c "command -v mosh && dpkg -s krdp"
