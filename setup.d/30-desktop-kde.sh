@@ -149,8 +149,8 @@ if have kwriteconfig6; then
     if [[ -n "$id1" && -n "$id2" && -n "$id3" && -n "$id4" ]]; then
       cat >"$HOME/.config/kwinrulesrc" <<EOF
 [General]
-count=6
-rules=ls-vertical-dock,ls-spotify-vertical,ls-code,ls-web,ls-science,ls-comm
+count=7
+rules=ls-vertical-dock,ls-spotify-vertical,ls-chatgpt-vertical,ls-code,ls-web,ls-science,ls-comm
 
 [ls-code]
 Description=linux-setup: editors and terminals on CODE
@@ -187,6 +187,25 @@ types=1
 screen=0
 screenrule=2
 desktops=$id2
+desktopsrule=2
+position=0,0
+positionrule=2
+size=1080,960
+sizerule=2
+
+[ls-chatgpt-vertical]
+# Top half of the vertical screen -- the slot Spotify uses. The OpenAI app reports its class as
+# "Chatgpt" (capital C) and its resourceName carries a config path, so match the class only via
+# wmclasscomplete=false. Left on all desktops (empty desktops=, as the dock does) rather than
+# pinned, so it is reachable wherever you are; Spotify shares the slot but is pinned to WEB.
+Description=linux-setup: ChatGPT/Codex app, top of the vertical screen, all desktops
+wmclass=Chatgpt
+wmclassmatch=2
+wmclasscomplete=false
+types=1
+screen=0
+screenrule=2
+desktops=
 desktopsrule=2
 position=0,0
 positionrule=2
