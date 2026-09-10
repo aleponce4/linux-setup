@@ -133,6 +133,8 @@ check "Dev: gh, git, delta"                  bash -c "command -v gh && command -
 check "Dev: node $NODE_VERSION via fnm"      bash -c "node --version | grep -q '^v${NODE_VERSION}\.'"
 check "Dev: uv, micromamba"                  bash -c "command -v uv && command -v micromamba"
 check "Dev: uv tools (labelme, radian, ruff, jupyter-lab)" bash -c "command -v labelme && command -v radian && command -v ruff && command -v jupyter-lab"
+# Guarded on ENABLE so an intentional opt-out is not reported as a failure.
+[[ -n "${CHATGPT_APP_DEB_URL:-}" ]] && check "Agents: ChatGPT/Codex desktop app" bash -c 'dpkg -s chatgpt >/dev/null 2>&1'
 check "Agents: claude, codex, agy, copilot"  bash -c "command -v claude && command -v codex && command -v agy && command -v copilot"
 check "Agents: machine guide linked"         bash -c "[[ -L $HOME/.claude/CLAUDE.md && -L $HOME/.codex/AGENTS.md ]]"
 [[ "${ENABLE_AGENT_SUDO:-yes}" == "yes" ]] && check "Agents: passwordless admin sudo" sudo -n apt-get --version

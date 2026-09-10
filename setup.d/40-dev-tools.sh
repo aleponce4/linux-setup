@@ -23,6 +23,14 @@ fi
 # ---- Cursor (only if a .deb URL is configured) ----
 if [[ -n "${CURSOR_DEB_URL:-}" ]] && ! have cursor; then download_deb "$CURSOR_DEB_URL"; fi
 
+# ChatGPT + Codex desktop app. Guarded on the dpkg name rather than `have chatgpt`, because the
+# binary is /usr/bin/chatgpt and a stray script of that name on PATH would silently skip a real
+# install. First run pulls the 380 MB .deb; after that its own signed apt repo handles upgrades,
+# so re-runs are a no-op rather than a re-download.
+if [[ -n "${CHATGPT_APP_DEB_URL:-}" ]] && ! dpkg -s chatgpt >/dev/null 2>&1; then
+  download_deb "$CHATGPT_APP_DEB_URL"
+fi
+
 # ---- Docker Engine + compose (official repo, deb822) ----
 if ! have docker; then
   sudo install -m 0755 -d /etc/apt/keyrings

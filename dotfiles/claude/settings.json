@@ -1,6 +1,6 @@
 {
   "model": "claude-fable-5-1[1m]",
-  "effortLevel": "xhigh",
+  "effortLevel": "low",
   "agentPushNotifEnabled": true,
   "skipWorkflowUsageWarning": true
 }
