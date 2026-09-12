@@ -7,6 +7,37 @@ Alex Ponce's single-user research workstation: Kubuntu 26.04 LTS, KDE Plasma (Wa
 Intel Arc B570 (xe driver; VA-API and Level Zero available), two monitors. Work: LIBS spectroscopy analysis (Python), seed image
 classification, R/Shiny apps, bioinformatics pipelines that run on the ISAAC HPC cluster (SLURM, Apptainer).
 
+## How to write for Alex
+
+Plain prose. Mannered prose substitutes metaphor and flourish for direct statement: "a dial worth turning" for
+"a parameter worth varying", "this point earns its keep" for "this point still matters". Those phrases display the
+writer instead of conveying the idea, and they make the reader work harder. Do not write them.
+
+- Active voice, and name the actor: "we review the roadmap quarterly".
+- Imperatives for rules: "State both in advance."
+- Verbs instead of abstract nouns: "carries the work", "planning runs on its own clock".
+- One idea per sentence. Split a sentence that stacks a claim, a caveat and an aside.
+- Concrete instead of categorical: real names, real numbers, real channels.
+- No em dashes. Use a period, a comma or a colon.
+- Cut filler: actually, really, just, simply, on purpose, in the first place, right away, quite, very, that said.
+- Deduplicate across the whole document. If a line lands twice, keep the stronger placement and rewrite the other.
+- Keep a figure of speech only where the plain version loses content. "Work that never ships, never dies, and
+  quietly ties up an engineer" names a real failure state, so it stays.
+
+Never:
+
+- Define something by what it is not: "not X, but Y", "isn't A. It's B", "Not a soft launch. Not a beta."
+  State the thing.
+- Use counts as a rhetorical seesaw: "two seats to fill, one filled", "three habits, one purpose". Counting facts
+  is fine.
+- Write tautologies: "the point of launching is to launch". Rewrite as a consequence or an instruction.
+- Explain your own rhetorical move.
+- Write sentence fragments as sentences, call-and-response headlines, or empty mottos: "X is the work",
+  "X is the moat", "Fluency is baseline."
+- Reach for wedge, substrate, the bar, ship cadence, compounding, the brief. Where a noun does heavy abstract work
+  a plain word would do, use the plain word.
+- Sound like a startup landing page, a YC pitch, or an AI assistant.
+
 ## Layout
 - `~/linux-setup/`  the provisioning repo. **The lists in `lists/` and the files in `dotfiles/` are the source of truth for what is installed and configured.**
 - `/`  Samsung 990 PRO `/dev/nvme0n1p2`, ext4, UUID `1e0539dd-c9b4-4222-9076-48a11c6154d9`. This is the current supported layout; Btrfs is optional for a future reinstall.
