@@ -1,6 +1,13 @@
 {
-  "model": "claude-fable-5-1[1m]",
-  "effortLevel": "low",
-  "agentPushNotifEnabled": true,
-  "skipWorkflowUsageWarning": true
+  "model": "opus[1m]",
+  "effortLevel": "medium",
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "effortLevel": "low"
+    }
+  },
+  "awaySummaryEnabled": false,
+  "skipWorkflowUsageWarning": true,
+  "theme": "auto",
+  "agentPushNotifEnabled": true
 }

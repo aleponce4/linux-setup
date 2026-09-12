@@ -163,6 +163,8 @@ check "Session: Chrome Remote Desktop not enabled" \
 # happening NOW.
 check "Session: no user unit in a restart storm" \
   bash -c 'n=$(journalctl --user --since "-10 min" --no-pager 2>/dev/null | grep -c "Scheduled restart job"); [[ "${n:-0}" -lt 10 ]]'
+check "Limits: inotify instances raised above the 128 default" \
+  bash -c '[ "$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 0)" -ge 1024 ]'
 check "Session: plasmashell running" pgrep -x plasmashell
 check "Session: desktop portal active" \
   bash -c 'systemctl --user is-active --quiet plasma-xdg-desktop-portal-kde.service'

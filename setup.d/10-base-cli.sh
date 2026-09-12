@@ -34,6 +34,23 @@ fi
 # tealdeer cache, atuin db init are harmless if repeated
 have tldr && tldr --update >/dev/null 2>&1 || true
 
+# inotify instance limit. The kernel default of 128 is a 2000s number and this desktop passed it:
+# KDE reported "140% of instances" with 180 in use. Watches were at 0%, so raising
+# max_user_watches, which is the advice every search result gives, would have changed nothing.
+#
+# Instances are per open inotify fd, not per watched file. Electron and Node processes take
+# several each: the ChatGPT app plus its codex node_repl children accounted for roughly 52 on
+# their own, alongside plasmashell (10), spotify (10), chrome and code (4 each).
+#
+# 1024 is headroom, not a fix for a leak. If this trips again, count instances per process
+# before raising it further:
+#   for p in /proc/[0-9]*; do n=$(ls -l $p/fd 2>/dev/null | grep -c anon_inode:inotify);
+#     [ "$n" -gt 0 ] && echo "$n $(cat $p/comm)"; done | sort -rn | head
+write_file_sudo /etc/sysctl.d/99-inotify.conf 0644 <<'EOF'
+fs.inotify.max_user_instances = 1024
+EOF
+sudo sysctl -q --system >/dev/null 2>&1 || warn "could not apply sysctl; run: sudo sysctl --system"
+
 # sensors for btop
 sudo sensors-detect --auto >/dev/null 2>&1 || true
 log "base CLI done"
