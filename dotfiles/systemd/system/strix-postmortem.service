@@ -1,0 +1,24 @@
+[Unit]
+Description=Explain how the previous boot ended
+Documentation=file:///home/alexponce/linux-setup/docs/crash-forensics.md
+# systemd-pstore moves panic records out of /sys/fs/pstore into /var/lib/systemd/pstore and then
+# clears the firmware area. Running after it is what lets the report quote a panic instead of
+# finding an empty directory.
+After=systemd-pstore.service systemd-journald.service local-fs.target
+Wants=systemd-pstore.service
+# The journal of the boot being examined is already on disk; nothing here needs the network,
+# the desktop, or the user session, all of which are exactly what a bad boot takes down.
+DefaultDependencies=yes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/strix-postmortem
+RemainAfterExit=no
+# A clean previous boot produces no report and exit 0, so this stays silent in the normal case.
+StandardOutput=journal
+StandardError=journal
+# Forensics must never be the reason a boot fails.
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

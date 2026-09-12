@@ -73,6 +73,7 @@ dotfiles/
   kde/panel.js        Plasma panel layout applied through the scripting API
 docs/manual-steps.md  logins, KDE shortcut tweaks, VPN, data restore
 docs/storage.md       current ext4 layout, optional Btrfs behavior, disk safety and recovery
+docs/crash-forensics.md  why the previous boot ended; what a postmortem report contains
 autoinstall/          archived Btrfs installer prototype; not supported for the current ext4 machine
 productivity.sh       separate opt-in dispatcher; no default or install-all action
 productivity/         dictation repair, safe AI/OCR handlers, research tools, experiments and doctor

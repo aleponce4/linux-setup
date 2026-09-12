@@ -166,6 +166,15 @@ check "Session: no user unit in a restart storm" \
 check "Session: plasmashell running" pgrep -x plasmashell
 check "Session: desktop portal active" \
   bash -c 'systemctl --user is-active --quiet plasma-xdg-desktop-portal-kde.service'
+# Crash forensics. These check that the evidence will EXIST next time, which is the only thing
+# worth asserting here -- whether the last boot happened to be clean is history, and making that
+# a red check would leave it red until the next reboot for a crash already dealt with.
+check "Forensics: postmortem runs at boot" \
+  bash -c 'systemctl is-enabled --quiet strix-postmortem.service && [[ -x /usr/local/sbin/strix-postmortem ]]'
+check "Forensics: sar history being collected" \
+  bash -c 'systemctl is-enabled --quiet sysstat.service && ls /var/log/sysstat/sa[0-9][0-9] >/dev/null 2>&1'
+check "Forensics: pstore archived (panics survive reboot)" \
+  bash -c 'systemctl is-enabled --quiet systemd-pstore.service'
 check "Remote: KRDP listening on 3389" bash -c 'ss -lnt | grep -q ":3389 "'
 check "Remote: RDP denied on the wired LAN" \
   bash -c 'sudo -n ufw status 2>/dev/null | grep -q "3389/tcp on enp6s0 *DENY"'
