@@ -75,7 +75,10 @@ restic_repository_nonempty() {
 
 check "GPU: xe driver bound"                bash -c "lspci -k | grep -A3 -i 'VGA.*Intel' | grep -q 'xe'"
 check "GPU: VA-API (iHD) decode"            bash -c "vainfo 2>/dev/null | grep -q VAEntrypointVLD"
-check "GPU: OpenGL renderer Intel"          bash -c "glxinfo -B 2>/dev/null | grep -qi 'intel'"
+# glxinfo is a GLX client: it needs DISPLAY *and* XAUTHORITY, and Xwayland's auth file is not
+# in the environment of a tailnet shell -- so this reported a dead GPU from exactly the session
+# you use to diagnose one. eglinfo reads the DRM device directly and answers with no session at all.
+check "GPU: OpenGL renderer Intel"          bash -c "eglinfo 2>/dev/null | grep -qi 'renderer.*intel' || glxinfo -B 2>/dev/null | grep -qi 'intel'"
 [[ "${ENABLE_INTEL_COMPUTE:-yes}" == "yes" ]] && check "GPU: OpenCL/Level Zero (clinfo)" bash -c "clinfo -l 2>/dev/null | grep -qi intel"
 check "Storage: root device is $ROOT_DEVICE" root_device_matches
 check "Storage: root filesystem is $ROOT_FS" bash -c "[[ \$(findmnt -n -o FSTYPE /) == \"$ROOT_FS\" ]]"
