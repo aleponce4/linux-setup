@@ -32,13 +32,21 @@ silently produces a session with no claude in it.
 RDP is on `3389`, scoped by ufw: `ALLOW on tailscale0`, `DENY on enp6s0`. Credentials and TLS
 material live in `~/.config/krdp/` (0700) and never enter the repo.
 
-Two things that cost time:
+Three things that cost time:
 
 - `krdpserver --help` says it generates a temporary certificate when none is given. Under
   systemd it does not -- it exits 255 with `A valid TLS certificate ("") and key ("") is
   required`. The certificate is passed explicitly.
 - Testing a port against the machine's own LAN IP proves nothing: the packet routes over `lo`,
   which ufw permits. Test from another host, or scope the rule by interface as done here.
+- The stock unit runs `krdpserver` with no arguments and it exits 255 on *"No users configured for
+  login"*. What supplies the username, password and certificate paths is a drop-in,
+  `app-org.kde.krdpserver.service.d/strix-credentials.conf`, symlinked out of the repo. Module 60
+  created that symlink from the start but the file behind it was never written or committed, so it
+  dangled and KRDP had never once listened -- discovered 2026-09-11, when the tailnet SSH console
+  was the only way in. A dangling drop-in is silent: systemd loads the unit without it and reports
+  no error, so module 60 now checks the link resolves instead of trusting `ln`'s exit code. The
+  secrets themselves stay in `~/.config/krdp/`; only their paths are in the repo.
 
 ## What went wrong on 2026-09-09
 

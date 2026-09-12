@@ -139,6 +139,12 @@ if have krdpserver; then
   mkdir -p "$HOME/.config/systemd/user/app-org.kde.krdpserver.service.d"
   ln -sfn "$REPO_DIR/dotfiles/systemd/user/app-org.kde.krdpserver.service.d/strix-credentials.conf" \
           "$HOME/.config/systemd/user/app-org.kde.krdpserver.service.d/strix-credentials.conf"
+  # This symlink pointed at a file that was never committed, and a dangling drop-in is silent:
+  # systemd loads the unit without it, krdpserver gets no --username and exits 255 on "No users
+  # configured for login", and the GUI way in is gone with nothing failed to point at. ln -sfn
+  # creates the link happily either way, so check the target, not the exit code.
+  [[ -e "$HOME/.config/systemd/user/app-org.kde.krdpserver.service.d/strix-credentials.conf" ]] \
+    || warn "krdp drop-in symlink is dangling (missing $REPO_DIR/dotfiles/systemd/user/app-org.kde.krdpserver.service.d/strix-credentials.conf); krdpserver will exit 255 with no credentials"
   # Reachable from the tailnet and nowhere else.
   sudo ufw allow in on tailscale0 to any port 3389 proto tcp >/dev/null 2>&1 || true
   sudo ufw deny  in on "${LAN_IFACE:-enp6s0}" to any port 3389 proto tcp >/dev/null 2>&1 || true
