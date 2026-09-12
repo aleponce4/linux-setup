@@ -72,6 +72,67 @@ Reading an older boot by hand, without disturbing any state:
 Both are the right escalation if crashes become frequent. Neither earns its cost for a single
 unexplained event, and a forensics tool that costs you work is one you will switch off.
 
+## The crash agent
+
+On a crash, `strix-crash-agent` hands the postmortem report to an unattended Opus session whose
+brief is: troubleshoot, restore service, patch the repo so it cannot recur, commit to a branch.
+It runs inside a window of the `strix` tmux session, so the same run is both unattended and
+attachable from any device -- `ssh alexponce@strix`, then `strix-remote`.
+
+    sudo -u alexponce strix-crash-agent --dry-run   # decide and print, run nothing
+    sudo -u alexponce strix-crash-agent             # run it for the newest unhandled report
+    sudo -u alexponce strix-crash-agent --force     # ignore the rate limit and the handled marker
+
+### The gates
+
+An agent that reacts to crashes has one genuinely dangerous failure mode, and it is not a single
+bad run: it is the loop. Crash, agent changes something, crash again, agent changes more, on a
+machine nobody is watching. Four gates in front of it, in order:
+
+1. **Kill switch.** `touch ~/.local/state/strix-crash-agent/disabled` stops it immediately, no
+   root and no edit required. `ENABLE_CRASH_AGENT="no"` in `config.env` is the durable form.
+2. **One run per crash**, keyed to the boot id, so the same report is never worked twice.
+3. **Crash-loop breaker.** More than 2 of the last 4 boots unclean *within 24 hours* and it stands
+   down, logs at error level and notifies, rather than compounding the problem. The 24-hour window
+   matters: without it the two already-fixed 2026-09-09 crashes kept it standing down on a machine
+   that was not looping at all.
+4. **Rate limit**, 6 hours minimum between runs.
+
+### The blast radius is enforced, not requested
+
+The session runs with `bypassPermissions`, because nobody is awake to answer prompts. So the
+limits cannot live in the prompt -- a model can reason its way around a paragraph. They live in
+`scripts/boot/crash-agent-guard.sh`, a `PreToolUse` hook wired in through
+`dotfiles/claude/crash-agent-settings.json`, which exits 2 to hard-block the tool call.
+
+**Allowed:** systemd units, configuration files, apt, and the `~/linux-setup` repo including
+commits to a branch.
+
+**Blocked:** bootloader and initramfs, kernel-package removal, partitioning and filesystems, raw
+block-device writes, `/boot` `/etc/fstab` `/etc/crypttab` and sudoers, user accounts, reboot, and
+`git push`. A blocked call returns a reason telling the agent to write the need up for a human
+instead of working around it.
+
+`scripts/boot/test-crash-agent-guard.sh` asserts all of this -- 21 deny cases, 12 allow cases.
+Module 15 runs it during provisioning and **refuses to install the agent if it fails**, because a
+guard that has silently stopped matching is worse than no guard: it looks supervised while being
+unsupervised.
+
+### Turning on the automatic trigger
+
+Provisioning deliberately does **not** enable the boot-time trigger. Starting an autonomous
+session automatically is a decision to make once, knowingly, rather than something a setup script
+does on your behalf. The units are in `dotfiles/systemd/user/`; to enable:
+
+    ln -sfn ~/linux-setup/dotfiles/systemd/user/strix-crash-agent.service ~/.config/systemd/user/
+    ln -sfn ~/linux-setup/dotfiles/systemd/user/strix-crash-agent.timer   ~/.config/systemd/user/
+    systemctl --user daemon-reload
+    systemctl --user enable --now strix-crash-agent.timer
+
+The timer fires 3 minutes after boot -- enough for the network, the desktop and the tmux session
+to come up, since starting the agent before its own escape route exists would be a poor way to
+begin. Until then, run it by hand after a crash; everything else here works unchanged.
+
 ## What the Sep 10 crash actually shows
 
 Recorded here because the evidence still exists and will not be regenerated:

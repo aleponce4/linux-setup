@@ -175,6 +175,11 @@ check "Forensics: sar history being collected" \
   bash -c 'systemctl is-enabled --quiet sysstat.service && ls /var/log/sysstat/sa[0-9][0-9] >/dev/null 2>&1'
 check "Forensics: pstore archived (panics survive reboot)" \
   bash -c 'systemctl is-enabled --quiet systemd-pstore.service'
+# The crash agent runs with bypassPermissions, so its PreToolUse guard is the only thing bounding
+# it. Assert the limits still HOLD rather than that the file exists -- a guard that has quietly
+# stopped matching (a renamed tool, a reworded regex) fails open, and looks fine while doing it.
+check "Forensics: crash-agent guard limits hold" \
+  bash -c '"$HOME"/linux-setup/scripts/boot/test-crash-agent-guard.sh >/dev/null 2>&1'
 check "Remote: KRDP listening on 3389" bash -c 'ss -lnt | grep -q ":3389 "'
 check "Remote: RDP denied on the wired LAN" \
   bash -c 'sudo -n ufw status 2>/dev/null | grep -q "3389/tcp on enp6s0 *DENY"'

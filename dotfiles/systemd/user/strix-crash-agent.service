@@ -1,0 +1,15 @@
+[Unit]
+Description=Hand the last crash to Claude for diagnosis and repair
+Documentation=file:///home/alexponce/linux-setup/docs/crash-forensics.md
+# Start after the persistent tmux session exists: the agent runs inside a window of it, so that
+# the run is attachable from any device rather than only readable afterwards.
+After=strix-remote-session.service
+Wants=strix-remote-session.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/linux-setup/scripts/boot/crash-agent.sh
+# Every gate inside the script exits 0 when it declines, so a clean boot is silent and this
+# never marks the boot degraded.
+StandardOutput=journal
+StandardError=journal

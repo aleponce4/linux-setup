@@ -1,0 +1,12 @@
+[Unit]
+Description=Check shortly after boot whether the last one crashed
+
+[Timer]
+# Three minutes lets the network, desktop and tmux session come up first. Starting the agent
+# before its own escape route exists would be a poor way to begin.
+OnBootSec=3min
+AccuracySec=30s
+Unit=strix-crash-agent.service
+
+[Install]
+WantedBy=timers.target

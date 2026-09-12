@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/alexponce/linux-setup/scripts/boot/crash-agent-guard.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
