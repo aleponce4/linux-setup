@@ -33,6 +33,28 @@ fi
 # somewhere durable before the firmware area is reused.
 systemd_enable_now systemd-pstore.service
 
+# Turn a silent kernel lockup into a recorded panic plus an automatic reboot.
+#
+# docs/crash-forensics.md held this back "for a single unexplained event" and named it the right
+# escalation "if crashes become frequent". That condition arrived on 2026-09-13: a second silent
+# hang, following Sep 10, after which the box sat frozen for six hours with the lockup detectors
+# running (nmi_watchdog=1) but every panic switch off, so each warning died in RAM and nothing
+# reached disk. The self-reboot this causes costs no unsaved work that the hang had not lost.
+#
+# efi_pstore stores the panic trace across the reboot and strix-postmortem already reads pstore,
+# so a lockup now arrives as a stack trace instead of another "unknown". No RAM is reserved,
+# which was the objection to kdump.
+#
+# hung_task_panic stays OFF on purpose. A task in D-state past 120s is normal here during a large
+# restic run to the 8 TB HGST, and panicking on it would reboot a healthy machine mid-backup.
+# Only real lockups panic: a CPU stuck in-kernel (soft) or with interrupts off (hard).
+write_file_sudo /etc/sysctl.d/99-crash-forensics.conf 0644 <<'EOF'
+kernel.softlockup_panic = 1
+kernel.hardlockup_panic = 1
+kernel.panic = 10
+EOF
+sudo sysctl -q --system >/dev/null 2>&1 || warn "could not apply sysctl; run: sudo sysctl --system"
+
 # The unit calls a stable path, not a path inside the repo checkout.
 sudo ln -sfn "$REPO_DIR/scripts/boot/postmortem.sh" /usr/local/sbin/strix-postmortem
 

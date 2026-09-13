@@ -62,15 +62,32 @@ Reading an older boot by hand, without disturbing any state:
     sudo strix-postmortem --boot -3 --stdout
     sudo strix-postmortem --boot -1 --force --stdout   # even if it ended cleanly
 
-## What is deliberately NOT installed
+## Escalation: panic on lockup (enabled 2026-09-13)
 
-- **kdump** -- permanently reserves RAM for a capture kernel, and only catches genuine panics. It
-  would not have caught the Sep 10 event.
-- **panic-on-hung-task / hardware watchdog** -- turns a silent freeze into a recorded panic, at the
-  price of rebooting the machine on its own and taking unsaved work with it.
+Module 15 sets `kernel.softlockup_panic=1`, `kernel.hardlockup_panic=1` and `kernel.panic=10`.
 
-Both are the right escalation if crashes become frequent. Neither earns its cost for a single
-unexplained event, and a forensics tool that costs you work is one you will switch off.
+This was held back "for a single unexplained event". The trigger for escalating was "crashes
+become frequent", and it arrived on 2026-09-13 with a second silent hang. That time the box sat
+frozen for six hours. The lockup detectors were already running (`nmi_watchdog=1`), but with the
+panic switches off each warning stayed in RAM and never reached disk. A lockup now panics, the
+trace lands in `efi_pstore`, and the machine reboots itself 10 seconds later. The postmortem
+reads pstore, so the next one arrives as a stack trace.
+
+The self-reboot costs no work that the hang had not already lost.
+
+Still deliberately off:
+
+- **hung_task_panic** -- a task in D-state for more than 120 seconds is normal during a large
+  restic run to the 8 TB HGST. Panicking on it would reboot a healthy machine mid-backup.
+- **kdump** -- permanently reserves RAM for a capture kernel. `efi_pstore` covers the panic
+  trace without that cost.
+
+## GPU firmware
+
+The Arc B570 shipped on FWCODE 21.1098. LVFS has 21.1182, marked urgency High. The `xe` driver
+logs `Failed to read power limits, check GPU firmware !` at every boot, and both silent hangs
+showed a GPU-style failure. Update with `fwupdmgr update`, then do a **full shutdown**, not a
+reboot: the flag is "Needs shutdown after installation".
 
 ## The crash agent
 
