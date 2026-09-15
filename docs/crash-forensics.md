@@ -89,6 +89,40 @@ logs `Failed to read power limits, check GPU firmware !` at every boot, and both
 showed a GPU-style failure. Update with `fwupdmgr update`, then do a **full shutdown**, not a
 reboot: the flag is "Needs shutdown after installation".
 
+## Leading hypothesis after the third silent hang: Ryzen idle freeze (2026-09-15)
+
+Three hangs with no kernel evidence: Sep 10 17:41, Sep 13 03:49, Sep 14 01:11. The Sep 14 box sat
+dead for 30 hours. Every one happened with the machine idle: load average 0.10 to 0.27, CPU 82% idle.
+
+What the third one ruled out:
+
+- **Kernel lockup.** softlockup_panic and hardlockup_panic were on. A lockup would have panicked,
+  written a trace to efi_pstore, and rebooted after 10 seconds. pstore stayed empty and nothing
+  rebooted, so the CPUs stopped below the point where the NMI watchdog can run.
+- **GPU firmware.** The Arc B570 was on 21.1182 by then.
+- **The ChatGPT app.** Open for one hang, closed for another.
+
+Hardware: AMD Ryzen 5 3600 (Zen 2), ASUS ROG STRIX B550-XE GAMING WIFI, BIOS 3607 (2024-03-18),
+microcode 0x8701034, idle driver acpi_idle.
+
+A Zen 2 package freezing at idle with no log and no watchdog is the documented Ryzen idle-freeze
+failure. The standard fix is a BIOS setting, and it touches no bootloader or kernel configuration:
+
+    Advanced > AMD CBS > CPU Common Options > Power Supply Idle Control = Typical Current Idle
+
+Change only that, then wait. Changing several things at once would hide which one worked.
+
+If it hangs again with that set, in order:
+
+1. Disable the deepest C-state at runtime with a oneshot unit writing `1` to
+   `/sys/devices/system/cpu/cpu*/cpuidle/state2/disable`. Boot config stays untouched.
+2. Load BIOS defaults for memory (DOCP/XMP off) to rule out RAM instability.
+3. BIOS update. A flash resets settings, and this machine needs Above 4G Decoding and Resizable BAR
+   re-enabled afterwards or the Arc B570 will not boot (see docs/boot-and-graphics.md).
+
+The NVMe unsafe-shutdown counter rose 128 to 129. The power button was held, so it does not
+distinguish a freeze from power loss here.
+
 ## The crash agent
 
 On a crash, `strix-crash-agent` hands the postmortem report to an unattended Opus session whose
