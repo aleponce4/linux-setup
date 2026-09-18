@@ -48,5 +48,6 @@
         "renv.lock": "json"
     },
     "editor.fontSize": 16,
-    "claudeCode.hideOnboarding": true
+    "claudeCode.hideOnboarding": true,
+    "github.copilot.nextEditSuggestions.eagerness": "low"
 }

@@ -165,6 +165,7 @@ check "Session: no user unit in a restart storm" \
   bash -c 'n=$(journalctl --user --since "-10 min" --no-pager 2>/dev/null | grep -c "Scheduled restart job"); [[ "${n:-0}" -lt 10 ]]'
 check "Limits: inotify instances raised above the 128 default" \
   bash -c '[ "$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 0)" -ge 1024 ]'
+[[ "${STRIX_NO_DEEP_CSTATE:-yes}" == "yes" ]] && check "Crash: deepest idle state disabled" bash -c '[ "$(cat /sys/devices/system/cpu/cpu0/cpuidle/state2/disable)" = 1 ]'
 check "Crash: hardware watchdog armed" bash -c '[ -e /dev/watchdog0 ] && [ "$(systemctl show -p RuntimeWatchdogUSec --value)" != "0" ]'
 check "Session: plasmashell running" pgrep -x plasmashell
 check "Session: desktop portal active" \

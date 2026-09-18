@@ -1,0 +1,15 @@
+[Unit]
+Description=Keep the CPU out of its deepest idle state (Ryzen idle-freeze mitigation)
+Documentation=file:///home/alexponce/linux-setup/docs/crash-forensics.md
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# state2 is the deepest idle state acpi_idle exposes on this Ryzen 5 3600. All four silent hangs
+# (Sep 10, 13, 14, 16) happened at idle with no kernel evidence, the documented Zen 2 idle freeze.
+# Cores now stop at C1 when idle. Costs a few watts at idle and nothing under load.
+ExecStart=/bin/sh -c 'for f in /sys/devices/system/cpu/cpu*/cpuidle/state2/disable; do echo 1 > "$f"; done'
+ExecStop=/bin/sh -c 'for f in /sys/devices/system/cpu/cpu*/cpuidle/state2/disable; do echo 0 > "$f"; done'
+
+[Install]
+WantedBy=multi-user.target

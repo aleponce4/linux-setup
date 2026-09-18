@@ -55,6 +55,19 @@ kernel.panic = 10
 EOF
 sudo sysctl -q --system >/dev/null 2>&1 || warn "could not apply sysctl; run: sudo sysctl --system"
 
+# Deep C-state off, as a Linux-side guard against the Ryzen idle freeze. Applied together with the
+# BIOS "Power Supply Idle Control = Typical Current Idle" change on 2026-09-17, the night before an
+# interview, when stopping the crash mattered more than learning which fix worked. Once the machine
+# has been stable for a couple of weeks, set STRIX_NO_DEEP_CSTATE=no to test the BIOS fix alone.
+if [[ "${STRIX_NO_DEEP_CSTATE:-yes}" == "yes" ]]; then
+  write_file_sudo /etc/systemd/system/strix-no-deep-cstate.service 0644 \
+    <"$REPO_DIR/dotfiles/systemd/system/strix-no-deep-cstate.service"
+  sudo systemctl daemon-reload
+  systemd_enable_now strix-no-deep-cstate.service
+else
+  sudo systemctl disable --now strix-no-deep-cstate.service 2>/dev/null || true
+fi
+
 # Hardware watchdog: reset the machine when the CPU is frozen too hard for any kernel mechanism.
 #
 # Four silent hangs (Sep 10, 13, 14, 16), all at idle. panic-on-lockup never fired, so the CPUs
