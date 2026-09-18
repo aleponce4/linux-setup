@@ -7,6 +7,10 @@ link_dotfile bashrc           "$HOME/.bashrc"
 link_dotfile zshrc            "$HOME/.zshrc"
 link_dotfile tmux.conf        "$HOME/.tmux.conf"
 link_dotfile starship.toml    "$HOME/.config/starship.toml"
+# Default printer: the Pantum M6550NW laser MFP on the LAN, the only printer here. cups-browsed
+# discovers it driverless over mDNS, so nothing is installed; this only makes it the default.
+mkdir -p "$HOME/.cups"
+link_dotfile cups/lpoptions    "$HOME/.cups/lpoptions"
 link_dotfile ghostty/config   "$HOME/.config/ghostty/config"
 link_dotfile ssh/config       "$HOME/.ssh/config"
 link_dotfile claude/settings.json "$HOME/.claude/settings.json"
