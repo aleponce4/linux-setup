@@ -55,6 +55,33 @@ kernel.panic = 10
 EOF
 sudo sysctl -q --system >/dev/null 2>&1 || warn "could not apply sysctl; run: sudo sysctl --system"
 
+# Hardware watchdog: reset the machine when the CPU is frozen too hard for any kernel mechanism.
+#
+# Four silent hangs (Sep 10, 13, 14, 16), all at idle. panic-on-lockup never fired, so the CPUs
+# stopped below the NMI watchdog, and the Sep 16 hang sat dead for 40 hours. sp5100_tco is a timer
+# in the AMD chipset, outside the CPU, so it still fires when the cores are stuck. systemd pets it
+# every 30s; if 60s pass with no pet, the chipset resets the board.
+#
+# Ubuntu blacklists sp5100_tco in /lib/modprobe.d. A blacklist only stops alias-based autoloading,
+# so naming it in modules-load.d loads it anyway. This bounds the outage at about a minute. It does
+# not stop the hang, and it restarts the machine on its own, which the docs accepted once hangs
+# became frequent.
+write_file_sudo /etc/modules-load.d/strix-watchdog.conf 0644 <<'EOF'
+sp5100_tco
+EOF
+write_file_sudo /etc/systemd/system.conf.d/strix-watchdog.conf 0644 <<'EOF'
+[Manager]
+RuntimeWatchdogSec=60s
+RebootWatchdogSec=5min
+EOF
+sudo modprobe sp5100_tco 2>/dev/null || true
+sudo systemctl daemon-reexec
+if [ -e /dev/watchdog0 ]; then
+  log "hardware watchdog armed: $(cat /sys/class/watchdog/watchdog0/identity 2>/dev/null)"
+else
+  warn "sp5100_tco loaded no /dev/watchdog0; the chipset watchdog may be disabled in firmware (check: sudo dmesg | grep sp5100)"
+fi
+
 # The unit calls a stable path, not a path inside the repo checkout.
 sudo ln -sfn "$REPO_DIR/scripts/boot/postmortem.sh" /usr/local/sbin/strix-postmortem
 

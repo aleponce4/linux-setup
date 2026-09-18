@@ -123,6 +123,17 @@ If it hangs again with that set, in order:
 The NVMe unsafe-shutdown counter rose 128 to 129. The power button was held, so it does not
 distinguish a freeze from power loss here.
 
+## Fourth hang, and the hardware watchdog (2026-09-17)
+
+Sep 16 03:17: idle again (load 0.16, CPU 82% idle), no kernel lines, pstore empty. The box sat dead
+for 40 hours. The BIOS idle setting had not been changed yet, so this hang confirms the pattern and
+does not test the fix.
+
+Module 15 now loads the AMD chipset watchdog `sp5100_tco`, which Ubuntu blacklists by default, and
+sets systemd `RuntimeWatchdogSec=60s`. The chipset timer runs outside the CPU, so it resets the
+board when the cores are frozen too hard for the kernel's own watchdog. This caps an outage at about
+a minute. It does not prevent the hang.
+
 ## The crash agent
 
 On a crash, `strix-crash-agent` hands the postmortem report to an unattended Opus session whose
