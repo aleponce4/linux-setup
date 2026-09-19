@@ -79,6 +79,10 @@ fi
 # so naming it in modules-load.d loads it anyway. This bounds the outage at about a minute. It does
 # not stop the hang, and it restarts the machine on its own, which the docs accepted once hangs
 # became frequent.
+# Opt-in since 2026-09-19: Alex judged an unexpected self-reboot a worse risk than a long outage.
+# Set STRIX_HW_WATCHDOG=yes in config.env to arm it. Heredoc bodies stay unindented: an indented
+# EOF terminator is not recognised and swallows the rest of the script.
+if [[ "${STRIX_HW_WATCHDOG:-no}" == "yes" ]]; then
 write_file_sudo /etc/modules-load.d/strix-watchdog.conf 0644 <<'EOF'
 sp5100_tco
 EOF
@@ -87,12 +91,15 @@ write_file_sudo /etc/systemd/system.conf.d/strix-watchdog.conf 0644 <<'EOF'
 RuntimeWatchdogSec=60s
 RebootWatchdogSec=5min
 EOF
-sudo modprobe sp5100_tco 2>/dev/null || true
-sudo systemctl daemon-reexec
-if [ -e /dev/watchdog0 ]; then
-  log "hardware watchdog armed: $(cat /sys/class/watchdog/watchdog0/identity 2>/dev/null)"
+  sudo modprobe sp5100_tco 2>/dev/null || true
+  sudo systemctl daemon-reexec
+  if [ -e /dev/watchdog0 ]; then
+    log "hardware watchdog armed: $(cat /sys/class/watchdog/watchdog0/identity 2>/dev/null)"
+  else
+    warn "sp5100_tco loaded no /dev/watchdog0; the chipset watchdog may be disabled in firmware (check: sudo dmesg | grep sp5100)"
+  fi
 else
-  warn "sp5100_tco loaded no /dev/watchdog0; the chipset watchdog may be disabled in firmware (check: sudo dmesg | grep sp5100)"
+  sudo rm -f /etc/modules-load.d/strix-watchdog.conf /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
 fi
 
 # The unit calls a stable path, not a path inside the repo checkout.

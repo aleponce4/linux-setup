@@ -134,6 +134,34 @@ sets systemd `RuntimeWatchdogSec=60s`. The chipset timer runs outside the CPU, s
 board when the cores are frozen too hard for the kernel's own watchdog. This caps an outage at about
 a minute. It does not prevent the hang.
 
+## Fifth hang: the BIOS change was not enough on its own (2026-09-19)
+
+Sep 18 21:38:18, after the BIOS visit that morning: idle again (load 0.02 to 0.19, CPU 82% idle),
+no kernel lines, no GPU errors, pstore empty, sysstat's 21:40 sample never ran. Alex found the
+machine powered on with every window black except a terminal, which did not respond.
+
+Ruled out this time:
+
+- **Screen blanking.** Displays are set never to turn off and the lock screen is disabled.
+- **GPU or PCIe power states.** The Arc B570 never entered runtime suspend (0 s suspended) and
+  L1 ASPM is off on its link.
+
+The BIOS setting cannot be read back from Linux, so it may not have been saved. The Linux C-state
+guard had never been installed. Module 15 now installs only that guard by default; the chipset
+watchdog is opt-in (`STRIX_HW_WATCHDOG=yes`) because Alex would rather not risk a self-reboot.
+
+### The test to run at the next hang
+
+Before pressing the power button, find out whether the kernel is still alive:
+
+1. From the MacBook: `ping 100.101.86.5`, or `ssh alexponce@strix`. A reply means the kernel is
+   alive and the hang is in the display stack (GPU, KWin), which points somewhere else entirely.
+2. At the keyboard: hold **Alt + PrtSc** and press **S**, then **U**, then **B**, a second apart.
+   `kernel.sysrq=176` permits exactly sync, remount read-only and reboot. If the machine reboots,
+   the kernel was alive. If nothing happens, the whole machine was frozen.
+
+Write down which one happened. That single answer separates a CPU/platform freeze from a GPU one.
+
 ## The crash agent
 
 On a crash, `strix-crash-agent` hands the postmortem report to an unattended Opus session whose
