@@ -1,0 +1,8 @@
+[Unit]
+Description=Record machine state to disk for crash forensics
+Documentation=file:///home/alexponce/linux-setup/docs/crash-forensics.md
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=%h/linux-setup/scripts/boot/heartbeat.sh

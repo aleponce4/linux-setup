@@ -1,0 +1,11 @@
+[Unit]
+Description=Record machine state every 20 seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=20s
+AccuracySec=1s
+Unit=strix-heartbeat.service
+
+[Install]
+WantedBy=timers.target

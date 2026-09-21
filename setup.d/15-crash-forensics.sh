@@ -102,6 +102,14 @@ else
   sudo rm -f /etc/modules-load.d/strix-watchdog.conf /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
 fi
 
+# 20-second heartbeat to a plain file. User units, so no sudo: linger keeps them running.
+mkdir -p "$HOME/.config/systemd/user"
+for _u in strix-heartbeat.service strix-heartbeat.timer; do
+  ln -sfn "$REPO_DIR/dotfiles/systemd/user/$_u" "$HOME/.config/systemd/user/$_u"
+done
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable --now strix-heartbeat.timer 2>/dev/null || true
+
 # The unit calls a stable path, not a path inside the repo checkout.
 sudo ln -sfn "$REPO_DIR/scripts/boot/postmortem.sh" /usr/local/sbin/strix-postmortem
 
