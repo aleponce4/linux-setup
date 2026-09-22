@@ -238,3 +238,32 @@ No baseline existed on 2026-09-10, so the power question is genuinely unanswerab
 It is answerable from the next one onward. See [boot-and-graphics.md](boot-and-graphics.md) for the
 GPU and boot story, and [remote-access.md](remote-access.md) for the 09-09 session collapse, which
 is a separate and fully explained failure.
+
+## Both mitigations finally live (2026-09-22)
+
+A seventh unclean stop (Sep 19 16:44, idle, silent, 26 hours dead) was handled by the crash agent,
+but a check on Sep 22 showed that **neither guard had ever reached the running system**: every
+core still had its deepest idle state enabled, and no watchdog was loaded. Module 15 had never
+been run after the Sep 19 commit. So seven freezes tested nothing.
+
+Installed by hand on Sep 22, as root, with the exact files Module 15 writes:
+
+- `strix-no-deep-cstate.service` enabled and active; `state2/disable` reads 1 on all 12 cores.
+- `sp5100_tco` loaded, `RuntimeWatchdogSec=60s`; systemd reports
+  `Using hardware watchdog /dev/watchdog0: 'SP5100 TCO timer'`, state active.
+- `STRIX_HW_WATCHDOG="yes"` in `config.env` (gitignored, so it lives only on the box).
+
+Alex reversed the watchdog decision: the machine now has to be reachable remotely at all times,
+and a one-minute self-reboot is the lesser evil. After a reset the box returns on its own: no
+disk encryption, SSH and Tailscale enabled at boot, SDDM autologin, linger for alexponce. GRUB
+holds the menu for 30 s after an unclean boot, then continues.
+
+What the next freeze now means:
+
+- **No freeze for two weeks** -> the idle guard did it. Then set `STRIX_NO_DEEP_CSTATE=no`, rerun
+  module 15, and see whether the BIOS setting alone holds.
+- **Freeze, watchdog reboots it** -> the C-state theory is wrong. Next: DOCP off in the BIOS
+  (RAM is four sticks at 3066 MT/s; Zen 2 rates four sticks at 2933), then BIOS 3636
+  (2026-01-30), re-enabling Above 4G Decoding and Resizable BAR afterwards.
+- **Freeze and no reboot** -> the chipset timer did not fire either; suspect the PSU or the
+  mains, and check the NVMe unsafe-shutdown counter in the postmortem.
