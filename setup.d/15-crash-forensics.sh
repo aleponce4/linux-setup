@@ -83,9 +83,25 @@ fi
 # Set STRIX_HW_WATCHDOG=yes in config.env to arm it. Heredoc bodies stay unindented: an indented
 # EOF terminator is not recognised and swallows the rest of the script.
 if [[ "${STRIX_HW_WATCHDOG:-no}" == "yes" ]]; then
-write_file_sudo /etc/modules-load.d/strix-watchdog.conf 0644 <<'EOF'
-sp5100_tco
+# Ubuntu deny-lists sp5100_tco in /lib/modprobe.d, and systemd-modules-load obeys that list:
+# an /etc/modules-load.d entry logs "Module 'sp5100_tco' is deny-listed (by kmod)" and stops.
+# An explicit modprobe ignores the deny-list, so load it from a unit instead.
+write_file_sudo /etc/systemd/system/strix-watchdog-module.service 0644 <<'EOF'
+[Unit]
+Description=Load the SP5100 chipset watchdog, which Ubuntu deny-lists for systemd-modules-load
+DefaultDependencies=no
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/modprobe sp5100_tco
+
+[Install]
+WantedBy=sysinit.target
 EOF
+  sudo rm -f /etc/modules-load.d/strix-watchdog.conf
+  sudo systemctl enable strix-watchdog-module.service >/dev/null 2>&1 || true
 write_file_sudo /etc/systemd/system.conf.d/strix-watchdog.conf 0644 <<'EOF'
 [Manager]
 RuntimeWatchdogSec=60s
@@ -99,7 +115,9 @@ EOF
     warn "sp5100_tco loaded no /dev/watchdog0; the chipset watchdog may be disabled in firmware (check: sudo dmesg | grep sp5100)"
   fi
 else
-  sudo rm -f /etc/modules-load.d/strix-watchdog.conf /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
+  sudo systemctl disable strix-watchdog-module.service >/dev/null 2>&1 || true
+  sudo rm -f /etc/modules-load.d/strix-watchdog.conf /etc/systemd/system/strix-watchdog-module.service \
+             /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
 fi
 
 # 20-second heartbeat to a plain file. User units, so no sudo: linger keeps them running.

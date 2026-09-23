@@ -267,3 +267,63 @@ What the next freeze now means:
   (2026-01-30), re-enabling Above 4G Decoding and Resizable BAR afterwards.
 - **Freeze and no reboot** -> the chipset timer did not fire either; suspect the PSU or the
   mains, and check the NVMe unsafe-shutdown counter in the postmortem.
+
+## Seventh hang, with both guards live (2026-09-23 06:53:41)
+
+The first freeze that actually tested the mitigations. Both were confirmed running beforehand:
+`state2/disable` read 1 on all 12 cores, and systemd held `/dev/watchdog0` with a 60 s hardware
+timeout from Sep 22 09:36.
+
+The heartbeat's last sample is 06:53:36. The machine was idle and cool:
+
+    06:53:36  load 0.34  blocked 4  CPU 57.8 C  GPU pkg 30 C  VRAM 34 C  fan 1095 rpm  NVMe 33.9 C
+
+The C2 usage counter reads 69350345 and had not moved for hours, so the cores never entered deep
+idle. The journal's last entry is 06:53:41.046. Both records stop inside five seconds of each
+other, with no thermal ramp, no load spike, no kernel message and an empty pstore.
+
+Three conclusions:
+
+- **The Ryzen idle-freeze theory is dead.** The cores were held out of C2 and the machine froze
+  anyway. The BIOS Power Supply Idle Control change is not the answer either.
+- **The chipset watchdog did not reset the box.** It was armed, the timeout was 60 s, and the
+  machine sat dead for 75 minutes until Alex power-cycled it at 08:08. Either the SP5100 reset
+  path is masked in this board's firmware, or whatever stops the CPU also stops the chipset
+  timer. A watchdog that cannot fire is not a remote-availability guarantee.
+- **The power supply is not dropping out.** The box stays powered with fans spinning through
+  every one of these events. A rail collapse would not leave it running.
+
+What is left: the DIMMs. Four sticks run at 3066 MT/s under DOCP, and Zen 2 rates four sticks at
+2933. A memory controller or Infinity Fabric hang stops every core at once with no exception to
+log, which is exactly this signature. That is the next test, and it costs nothing to run.
+
+### Order of tests from here
+
+1. **DOCP off** in the BIOS, RAM back to JEDEC. Run a week. No software changes, no new risk.
+2. **Memtest86+** overnight if a freeze follows, from the GRUB menu.
+3. **BIOS 3636** (2026-01-30), then re-enable Above 4G Decoding and Resizable BAR.
+4. **Pull the Arc B570** and run headless over Tailscale SSH. The Ryzen 5 3600 has no integrated
+   graphics, so this is display-free by necessity, and that is the point: a headless box that
+   never freezes implicates the card.
+
+### The watchdog never survived a reboot
+
+`/etc/modules-load.d/strix-watchdog.conf` does nothing on Ubuntu. The kernel packages deny-list
+`sp5100_tco` in `/lib/modprobe.d/blacklist_linux_*.conf`, and systemd-modules-load obeys it:
+
+    systemd-modules-load[392]: Module 'sp5100_tco' is deny-listed (by kmod)
+    systemd[1]: Failed to open any watchdog device before the initial transaction completed
+
+So the watchdog was live only because it was modprobed by hand on Sep 22, and it vanished at the
+next boot. Module 15 now installs `strix-watchdog-module.service`, which runs an explicit
+`modprobe` before `sysinit.target`. An explicit modprobe ignores the deny-list. Verify after a
+reboot that `/dev/watchdog0` exists and systemd reports it.
+
+### The dead monitor is the monitor, not the GPU
+
+Both outputs still work as far as the machine is concerned. `card0-DP-2` and `card0-HDMI-A-3`
+report `connected`, `dpms=On`, and a full 256-byte EDID read over DDC. kscreen-doctor shows both
+enabled with modes set and geometry assigned. A panel that answers EDID has a live controller
+board, so the failure is downstream: backlight, inverter or panel. Confirm by plugging it into
+another machine. Do not read anything into `stat` reporting `edid` as 0 bytes; sysfs binary
+attributes always report size 0 and still return data.
