@@ -61,5 +61,10 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$(scale "$K10/temp1_input" 1000)" "$(scale "${GPU_PKG:-/nonexistent}" 1000)" "$(scale "${GPU_VRAM:-/nonexistent}" 1000)" \
     "$(rd "$XE/fan1_input")" "$(rd "$XE/energy1_input")" "$(scale "$NVME/temp1_input" 1000)" >> "$OUT"
 
+# Force the line to disk. Without this, ext4 delayed allocation leaves the most recent writes
+# unflushed, and a hard freeze turns them into a block of NUL bytes: on 2026-09-23 the last
+# readable sample was almost seven hours before the freeze, losing exactly the part that matters.
+sync -d "$OUT" 2>/dev/null || true
+
 # Keep two weeks; each day is well under a megabyte.
 find "$OUT_DIR" -name '*.tsv' -mtime +14 -delete 2>/dev/null || true
