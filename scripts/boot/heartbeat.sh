@@ -64,9 +64,19 @@ if [ -n "$NCT" ]; then
         [ -r "$f" ] || continue
         b=$(basename "$f" _input); nct_names+=("mb_$b"); nct_vals+=("$(rd "$f")")
     done
+    # Raw millivolts, not volts. The first day of data recorded these through scale(), which
+    # rounds to one decimal: every rail read as a flat 3.400 or 1.000 and a sagging supply would
+    # have been invisible. Resolution matters more than readability in the column that is
+    # supposed to catch a dying PSU.
     for f in "$NCT"/in*_input; do
         [ -r "$f" ] || continue
-        b=$(basename "$f" _input); nct_names+=("mb_${b}_V"); nct_vals+=("$(scale "$f" 1000)")
+        b=$(basename "$f" _input); nct_names+=("mb_${b}_mV"); nct_vals+=("$(rd "$f")")
+    done
+    # The duty cycle the board commands, beside the RPM the fan actually returns. Without it a
+    # stalling fan and a fan the curve simply is not pushing look identical in the data.
+    for f in "$NCT"/pwm[0-9]; do
+        [ -r "$f" ] || continue
+        nct_names+=("mb_$(basename "$f")"); nct_vals+=("$(rd "$f")")
     done
     for f in "$NCT"/temp*_input; do
         [ -r "$f" ] || continue
