@@ -120,6 +120,34 @@ else
              /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
 fi
 
+# Thermal cap. The board sensors, once readable, showed the stock Wraith failing: pwm1 at 244/255
+# turns the CPU fan 1275 RPM while the chassis fan does 2008 RPM at 193/255, and the CPU sat at
+# 77.8 C under a third of its threads. Capping frequency is not a fix, it is a way to keep the
+# machine usable and cooler until the cooler is replaced, which matters because Alex is often
+# remote and cannot power-cycle a frozen box.
+#
+# Off by default. Set STRIX_CPU_MAX_MHZ in config.env to arm it: "base" disables boost only,
+# a number additionally caps scaling_max_freq to that many MHz.
+if [[ -n "${STRIX_CPU_MAX_MHZ:-}" ]]; then
+  write_file_sudo /etc/systemd/system/strix-cpu-thermal-cap.service 0644 \
+    <"$REPO_DIR/dotfiles/systemd/system/strix-cpu-thermal-cap.service"
+  if [[ "$STRIX_CPU_MAX_MHZ" == "base" ]]; then
+    sudo rm -f /etc/systemd/system/strix-cpu-thermal-cap.service.d/cap.conf 2>/dev/null || true
+  else
+    write_file_sudo /etc/systemd/system/strix-cpu-thermal-cap.service.d/cap.conf 0644 <<EOF
+[Service]
+Environment=CAP_KHZ=$(( STRIX_CPU_MAX_MHZ * 1000 ))
+EOF
+  fi
+  sudo systemctl daemon-reload
+  systemd_enable_now strix-cpu-thermal-cap.service
+  log "CPU thermal cap armed (STRIX_CPU_MAX_MHZ=$STRIX_CPU_MAX_MHZ); boost is off"
+else
+  sudo systemctl disable --now strix-cpu-thermal-cap.service 2>/dev/null || true
+  sudo rm -f /etc/systemd/system/strix-cpu-thermal-cap.service \
+             /etc/systemd/system/strix-cpu-thermal-cap.service.d/cap.conf 2>/dev/null || true
+fi
+
 # Motherboard sensors. `sensors` on this box reports the GPU, the NVMe, the WiFi card and
 # k10temp, and nothing from the board: no CPU fan RPM, no VRM temperature, no rail voltages. The
 # B550-XE carries a Nuvoton NCT6798D and the nct6775 driver is present, but ACPI claims the

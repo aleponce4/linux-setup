@@ -1,0 +1,19 @@
+[Unit]
+Description=Cap CPU boost and peak frequency while the cooler is degraded
+Documentation=file:///home/alexponce/linux-setup/docs/crash-forensics.md
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The stock Wraith on this 3600 is failing: at 96% PWM the CPU fan turns 1275 RPM, and idle
+# temperature rose 7 C over five days while the case warmed 2 C. Until the cooler is replaced,
+# hold the CPU below the frequencies that produce the heat it can no longer move. Boost off
+# takes the 3600 from 4.2 GHz to its 3.6 GHz base; STRIX_CPU_MAX_MHZ lowers it further.
+# Single-thread work slows; nothing breaks. Remove the unit to undo.
+ExecStart=/bin/sh -c 'echo 0 > /sys/devices/system/cpu/cpufreq/boost 2>/dev/null || true'
+ExecStart=/bin/sh -c 'if [ -n "${CAP_KHZ:-}" ]; then for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo "$CAP_KHZ" > "$f" 2>/dev/null || true; done; fi'
+ExecStop=/bin/sh -c 'echo 1 > /sys/devices/system/cpu/cpufreq/boost 2>/dev/null || true'
+ExecStop=/bin/sh -c 'for f in /sys/devices/system/cpu/cpu*/cpufreq; do cat "$f/cpuinfo_max_freq" > "$f/scaling_max_freq" 2>/dev/null || true; done'
+
+[Install]
+WantedBy=multi-user.target

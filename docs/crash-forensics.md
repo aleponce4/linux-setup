@@ -327,3 +327,47 @@ enabled with modes set and geometry assigned. A panel that answers EDID has a li
 board, so the failure is downstream: backlight, inverter or panel. Confirm by plugging it into
 another machine. Do not read anything into `stat` reporting `edid` as 0 bytes; sysfs binary
 attributes always report size 0 and still return data.
+
+## The board sensors, and a failing CPU fan (2026-09-24)
+
+`acpi_enforce_resources=lax` plus `nct6775` made the NCT6798D readable. The first hour of data
+found something no other sensor on this machine could see.
+
+Fan response against the duty cycle the board commands:
+
+| | at 76% PWM | at 96% PWM | RPM per % duty |
+|---|---|---|---|
+| fan1 | 1105 | 1275 | 8.5 |
+| fan2 | 1190 (at 49%) | 2008 (at 76%) | 30 |
+
+fan2 scales the way a working fan scales. fan1 is nearly flat: a fifth more duty buys 170 RPM,
+and at 96% it delivers 1275 RPM where a Wraith Stealth is rated near 2600. At the same time the
+CPU sat at Tctl 77.8 C with roughly a third of its threads busy, on a 65 W part.
+
+The header mapping is unconfirmed, because reading the ASUS fan labels needs the BIOS and Alex is
+usually remote. It does not change the conclusion: the CPU is running far hotter than this cooler
+should allow, and idle temperature rose 7 C in five days while the case warmed 2 C. Replace the
+cooler. A 35 dollar tower beats repasting the Wraith.
+
+Two unrelated readings that look alarming and are not: AUXTIN0 and AUXTIN3 both sit at exactly
+95.0 C with alarms while three neighbours read 28.0 C, which is the open-circuit value for
+unconnected thermistors. The `in*` voltage channels have no board-specific divider mapping, so
+`in2`, `in3`, `in7` and `in8` are clearly the 3.3 V rails but nothing yet identifies +12 V.
+
+The watchdog fix worked: `/dev/watchdog0` now exists after a plain reboot, systemd holds it at a
+60 s timeout, and `strix-watchdog-module.service` is enabled. DOCP is off, four sticks at
+2400 MT/s. The deep-idle guard is still active.
+
+### Thermal cap, for the remote case
+
+`strix-cpu-thermal-cap.service` turns boost off and optionally caps `scaling_max_freq`. It is not
+a fix. It exists because a freeze while Alex is away means the machine is gone until he is back in
+the room, so running the CPU cooler than a failing heatsink allows is worth a slower single thread.
+Arm it with `STRIX_CPU_MAX_MHZ` in `config.env`: `base` for boost off, or a number in MHz.
+
+### Remote recovery is the real gap
+
+Nine freezes, and the only way back has been a hand on the power button. The watchdog is armed but
+did not fire on Sep 23. A smart plug on the wall outlet, plus **Restore AC Power Loss = Power On**
+in the BIOS, turns every freeze into a 30-second phone tap. That BIOS setting is the one thing
+that has to wait for someone to be at the machine.
