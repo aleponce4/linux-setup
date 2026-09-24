@@ -120,6 +120,35 @@ else
              /etc/systemd/system.conf.d/strix-watchdog.conf 2>/dev/null || true
 fi
 
+# Motherboard sensors. `sensors` on this box reports the GPU, the NVMe, the WiFi card and
+# k10temp, and nothing from the board: no CPU fan RPM, no VRM temperature, no rail voltages. The
+# B550-XE carries a Nuvoton NCT6798D and the nct6775 driver is present, but ACPI claims the
+# Super-I/O ports and the kernel refuses to bind over them unless told to stand down. Without
+# these readings the two leading suspects for the silent freezes, a failing CPU cooler and a
+# sagging 12 V rail, are both invisible.
+#
+# acpi_enforce_resources=lax lets a native driver claim a region ACPI has reserved. The risk is
+# real but small and well understood: ACPI and the driver could in principle poke the same
+# Super-I/O registers. It is the standard way to read sensors on ASUS boards and has been for
+# years. Revert by deleting the drop-in and running update-grub.
+write_file_sudo /etc/default/grub.d/99-strix-sensors.cfg 0644 <<'EOF'
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT acpi_enforce_resources=lax"
+EOF
+# write_file_sudo always returns 0, so decide on the generated config rather than on its result.
+if ! grep -q 'acpi_enforce_resources=lax' /boot/grub/grub.cfg 2>/dev/null; then
+  sudo update-grub >/dev/null 2>&1 || warn "update-grub failed"
+  log "acpi_enforce_resources=lax added; motherboard sensors appear after the next reboot"
+fi
+write_file_sudo /etc/modules-load.d/strix-sensors.conf 0644 <<'EOF'
+nct6775
+EOF
+sudo modprobe nct6775 2>/dev/null || true
+if sensors 2>/dev/null | grep -q '^nct6'; then
+  log "motherboard sensors live: $(sensors 2>/dev/null | grep -m1 '^nct6')"
+else
+  log "motherboard sensors pending a reboot (nct6775 cannot bind until acpi_enforce_resources=lax is in effect)"
+fi
+
 # 20-second heartbeat to a plain file. User units, so no sudo: linger keeps them running.
 mkdir -p "$HOME/.config/systemd/user"
 for _u in strix-heartbeat.service strix-heartbeat.timer; do

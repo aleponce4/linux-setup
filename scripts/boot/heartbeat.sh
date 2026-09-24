@@ -49,17 +49,57 @@ for f in /sys/devices/system/cpu/cpu*/cpuidle/state2/time; do
     [ -r "$f" ] && c2_time=$(( c2_time + $(cat "$f" 2>/dev/null || echo 0) ))
 done
 
+# Motherboard sensors (Nuvoton NCT6798D via nct6775). Absent until the kernel is booted with
+# acpi_enforce_resources=lax: ACPI claims the Super-I/O ports and the driver refuses to bind
+# without it. These are the columns that answer "is the CPU fan slowing down?" and "is the 12 V
+# rail sagging?", the two suspects nothing else on this machine can see.
+#
+# The channel names are generic (fan1, in0, temp2) because the board ships no sensors3.conf, so
+# the columns are emitted dynamically and the header records whatever was present when the day's
+# file was created. Confirm the mapping once with `sensors` before reading meaning into a column.
+NCT=$(hw nct6798); [ -n "$NCT" ] || NCT=$(hw nct6775); [ -n "$NCT" ] || NCT=$(hw nct6799)
+nct_names=(); nct_vals=()
+if [ -n "$NCT" ]; then
+    for f in "$NCT"/fan*_input; do
+        [ -r "$f" ] || continue
+        b=$(basename "$f" _input); nct_names+=("mb_$b"); nct_vals+=("$(rd "$f")")
+    done
+    for f in "$NCT"/in*_input; do
+        [ -r "$f" ] || continue
+        b=$(basename "$f" _input); nct_names+=("mb_${b}_V"); nct_vals+=("$(scale "$f" 1000)")
+    done
+    for f in "$NCT"/temp*_input; do
+        [ -r "$f" ] || continue
+        b=$(basename "$f" _input); nct_names+=("mb_${b}_C"); nct_vals+=("$(scale "$f" 1000)")
+    done
+fi
+
+# Tctl is the control temperature the fan curve follows; Tccd1 is the actual die sensor. They
+# differ by an offset on some Ryzen parts, so record both rather than inferring one from the other.
+K10_TCCD=$(lbl "$K10" Tccd1)
+
 read -r _ u n s idle iow rest < /proc/stat
 blocked=$(awk '/^procs_blocked/{print $2}' /proc/stat)
 load=$(awk '{print $1}' /proc/loadavg)
 up=$(awk '{printf "%d", $1}' /proc/uptime)
 
-[ -s "$OUT" ] || printf 'epoch\ttime\tup_s\tload1\tblocked\tcpu_idle_j\tcpu_iowait_j\tc2_state\tc2_usage\tc2_time_us\tcpu_C\tgpu_C\tvram_C\tgpu_fan\tgpu_uJ\tnvme_C\n' >> "$OUT"
-printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+hdr='epoch\ttime\tup_s\tload1\tblocked\tcpu_idle_j\tcpu_iowait_j\tc2_state\tc2_usage\tc2_time_us\tcpu_C\tccd1_C\tgpu_C\tvram_C\tgpu_fan\tgpu_uJ\tnvme_C'
+for n in "${nct_names[@]}"; do hdr="$hdr\t$n"; done
+# If the column set changed since the file was created (a sensor driver appeared, or the script
+# gained a column), start a fresh file rather than appending rows the header no longer describes.
+if [ -s "$OUT" ]; then
+    want=$(printf '%b' "$hdr")
+    [ "$(head -1 "$OUT")" = "$want" ] || { mv -f "$OUT" "$OUT.$(date +%H%M%S).old"; }
+fi
+[ -s "$OUT" ] || printf '%b\n' "$hdr" >> "$OUT"
+row=$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' \
     "$(date +%s)" "$(date +%H:%M:%S)" "$up" "$load" "${blocked:-NA}" "$idle" "$iow" \
     "$c2_name" "$c2_usage" "$c2_time" \
-    "$(scale "$K10/temp1_input" 1000)" "$(scale "${GPU_PKG:-/nonexistent}" 1000)" "$(scale "${GPU_VRAM:-/nonexistent}" 1000)" \
-    "$(rd "$XE/fan1_input")" "$(rd "$XE/energy1_input")" "$(scale "$NVME/temp1_input" 1000)" >> "$OUT"
+    "$(scale "$K10/temp1_input" 1000)" "$(scale "${K10_TCCD:-/nonexistent}" 1000)" \
+    "$(scale "${GPU_PKG:-/nonexistent}" 1000)" "$(scale "${GPU_VRAM:-/nonexistent}" 1000)" \
+    "$(rd "$XE/fan1_input")" "$(rd "$XE/energy1_input")" "$(scale "$NVME/temp1_input" 1000)")
+for v in "${nct_vals[@]}"; do row="$row\t$v"; done
+printf '%b\n' "$row" >> "$OUT"
 
 # Force the line to disk. Without this, ext4 delayed allocation leaves the most recent writes
 # unflushed, and a hard freeze turns them into a block of NUL bytes: on 2026-09-23 the last
