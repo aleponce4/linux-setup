@@ -14,5 +14,6 @@
   "awaySummaryEnabled": false,
   "skipWorkflowUsageWarning": true,
   "theme": "auto",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "remoteControlAtStartup": true
 }

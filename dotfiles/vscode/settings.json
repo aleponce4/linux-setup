@@ -49,5 +49,6 @@
     },
     "editor.fontSize": 16,
     "claudeCode.hideOnboarding": true,
-    "github.copilot.nextEditSuggestions.eagerness": "low"
+    "github.copilot.nextEditSuggestions.eagerness": "low",
+    "claudeCode.focusView": false
 }

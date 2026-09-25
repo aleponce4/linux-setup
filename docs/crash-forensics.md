@@ -371,3 +371,17 @@ Nine freezes, and the only way back has been a hand on the power button. The wat
 did not fire on Sep 23. A smart plug on the wall outlet, plus **Restore AC Power Loss = Power On**
 in the BIOS, turns every freeze into a 30-second phone tap. That BIOS setting is the one thing
 that has to wait for someone to be at the machine.
+
+## DOCP off: 30 hours clean, including a night at Tjmax (2026-09-25)
+
+Boot `0b375852` started Sep 24 08:04 with DOCP off (four sticks at 2400 MT/s) and kernel
+7.0.0-34. At Sep 25 14:50 it had run 30 h 46 min without a freeze or a heartbeat gap.
+
+The night was an unplanned stress test. A workload ran from about 01:00 to 08:00 with load 4 to
+13, and Tctl sat at 84 to 94 C with a peak of 95.8 C, at the chip's limit. fan1 stayed pinned
+at 1270 to 1286 RPM. Before the change the machine froze at 58 C idle and at 82 C under load.
+After it, seven hours at the thermal limit passed without incident.
+
+So heat alone does not freeze this machine, and DOCP is now the leading explanation. The
+kernel update landed in the same boot and cannot be excluded yet. Keep DOCP off. The CPU still
+needs the new cooler: 95.8 C means it was throttling all night.
