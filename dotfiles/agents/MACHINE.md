@@ -6,6 +6,7 @@ Read this before changing anything system-wide. It is linked as `~/.claude/CLAUD
 Alex Ponce's single-user research workstation: Kubuntu 26.04 LTS, KDE Plasma (Wayland), AMD Ryzen 5 3600, 32 GB RAM,
 Intel Arc B570 (xe driver; VA-API and Level Zero available), two monitors. Work: LIBS spectroscopy analysis (Python), seed image
 classification, R/Shiny apps, bioinformatics pipelines that run on the ISAAC HPC cluster (SLURM, Apptainer).
+The ISAAC cluster guide is cloned at `~/work/tools/isaac-hpc`. Read its `README.md` and `GOTCHAS.md` before any cluster work.
 
 ## How to write for Alex
 
