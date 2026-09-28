@@ -3,3 +3,4 @@ labelme
 radian
 ruff
 jupyterlab
+datasette            # serves the family genome portal (genome-portal.service)

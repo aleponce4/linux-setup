@@ -1,0 +1,22 @@
+[Unit]
+Description=Family genome report site and Datasette search on port 8765 (tailnet only)
+Documentation=file:///home/alexponce/work/personal/genome-query/README.md
+After=default.target
+RequiresMountsFor=/data
+
+[Service]
+# `genome site` rewrites the files under _family/ and restarts this unit. Datasette serves browse.sqlite
+# read-only (-i) at /browse, the static report pages at /site, and redirects / to /site/index.html.
+# Listening on all interfaces is safe only because ufw denies incoming traffic except on tailscale0 (module
+# 60): the portal answers at http://strix.<tailnet>.ts.net:8765 and never on the LAN. With Tailscale Serve
+# enabled for the tailnet, module 80 also publishes it as https://strix.<tailnet>.ts.net:8443.
+ExecStart=%h/.local/bin/datasette serve -i /data/datasets/genomes/_family/browse.sqlite \
+  --metadata /data/datasets/genomes/_family/datasette-metadata.json \
+  --static site:/data/datasets/genomes/_family/site \
+  --template-dir /data/datasets/genomes/_family/datasette-templates \
+  --host 0.0.0.0 --port 8765 --setting sql_time_limit_ms 5000
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

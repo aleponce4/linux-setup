@@ -16,6 +16,12 @@ have used to fix it.
 "genome" in the Claude app's Code tab to ask questions about the genome; the repo's `CLAUDE.md` holds the
 rules. `tmux attach -t genome` shows the same session locally.
 
+`genome-portal.service` (module 80) serves the family genome reports and a Datasette search over them on port
+8765: http://strix.tailb0ab21.ts.net:8765 from any tailnet device. It listens on all interfaces, so it relies on
+ufw denying incoming traffic outside tailscale0. HTTPS on port 8443 needs Tailscale Serve enabled once for the
+tailnet (the link `sudo tailscale serve --bg --https=8443 http://127.0.0.1:8765` prints); module 80 then publishes
+https://strix.tailb0ab21.ts.net:8443. A phone needs the Tailscale app signed in to the same account.
+
 ## The persistent session
 
     ssh alexponce@strix

@@ -81,12 +81,16 @@ GENOME_REPO="$WORK_DIR/personal/genome-query"
 if [[ -d "$GENOME_REPO/.git" ]]; then
   git -C "$GENOME_REPO" config core.hooksPath .githooks   # pre-commit guard against committing genomic data
   mkdir -p "$HOME/.config/systemd/user"
-  for u in genome-update.service genome-update.timer genome-claude.service; do
+  for u in genome-update.service genome-update.timer genome-claude.service genome-portal.service; do
     ln -sfn "$REPO_DIR/dotfiles/systemd/user/$u" "$HOME/.config/systemd/user/$u"
   done
   systemctl --user daemon-reload 2>/dev/null || true
-  systemctl --user enable --now genome-update.timer genome-claude.service 2>/dev/null \
-    || warn "genome units did not start (check: systemctl --user status genome-claude genome-update.timer)"
+  systemctl --user enable --now genome-update.timer genome-claude.service genome-portal.service 2>/dev/null \
+    || warn "genome units did not start (check: systemctl --user status genome-claude genome-portal genome-update.timer)"
+  # HTTPS on the tailnet for the report portal. Tailscale Serve must be enabled once for the tailnet in the admin
+  # console; until then this times out and the portal stays on http://strix.<tailnet>.ts.net:8765.
+  timeout 15 sudo tailscale serve --bg --https=8443 http://127.0.0.1:8765 >/dev/null 2>&1 \
+    || warn "tailscale serve not enabled for the tailnet; portal is on http port 8765 only (see docs/remote-access.md)"
   [[ -f "$GENOME_REPO/config.local.toml" ]] \
     || warn "genome-query has no config.local.toml; copy config.example.toml and fill it in"
 fi
