@@ -169,4 +169,15 @@ ln -sfn "$REPO_DIR/dotfiles/systemd/user/plasma-kglobalaccel.service.d/strix-res
 systemctl --user daemon-reload 2>/dev/null || true
 systemctl --user enable --now strix-remote-session.service 2>/dev/null || true
 
+# ---- Codex remote control (experimental): lets the ChatGPT app drive Codex on this machine ----
+# Needs the standalone Codex install from module 40. One-time pairing: `codex remote-control pair`, then enter
+# the code in the ChatGPT app.
+if [[ -x $HOME/.local/bin/codex ]]; then
+  ln -sfn "$REPO_DIR/dotfiles/systemd/user/codex-remote-control.service" \
+          "$HOME/.config/systemd/user/codex-remote-control.service"
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable --now codex-remote-control.service 2>/dev/null \
+    || warn "codex remote control did not start (check: journalctl --user -u codex-remote-control)"
+fi
+
 log "remote done. Manual: 'sudo tailscale up --ssh', then from another device: ssh $TARGET_USER@$HOSTNAME_TARGET  (MagicDNS). GUI: KDE RDP (System Settings > Remote Desktop) or CRD. VS Code: 'code tunnel user login' then 'code tunnel service install'."

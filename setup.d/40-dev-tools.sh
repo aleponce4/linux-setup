@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 40-dev-tools.sh - VS Code + extensions, Cursor (optional), Docker Engine + compose, Apptainer, GitHub CLI,
-#                   Node via fnm + npm CLIs (Codex, Copilot, OpenCode), uv + micromamba, Claude Code, Antigravity CLI,
+#                   Node via fnm + npm CLIs (Copilot, OpenCode), uv + micromamba, Claude Code, Codex, Antigravity CLI,
 #                   terminal extras (yazi, lazydocker), passwordless admin sudo for agents
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"; load_config
@@ -75,7 +75,7 @@ add_apt_repo githubcli https://cli.github.com/packages/githubcli-archive-keyring
   "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main"
 apt_install gh
 
-# ---- Node via fnm + npm globals (Codex CLI, Copilot CLI, OpenCode, netlify) ----
+# ---- Node via fnm + npm globals (Copilot CLI, OpenCode, netlify) ----
 if [[ ! -x "$HOME/.local/share/fnm/fnm" ]]; then
   curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell >/dev/null 2>&1 || warn "fnm install failed"
 fi
@@ -105,6 +105,12 @@ fi
 
 # ---- AI agents: Claude Code (native installer) and Antigravity CLI (Google's installer script) ----
 have claude || curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 || warn "Claude Code install failed"
+# Codex CLI from OpenAI's standalone installer (verified download into ~/.codex/packages, link in ~/.local/bin).
+# `codex remote-control`, which lets the ChatGPT app drive Codex on this machine, requires this install; the npm
+# package does not provide it. ~/.local/bin goes on PATH first so the installer leaves the managed .bashrc alone.
+[[ -x $HOME/.codex/packages/standalone/current/bin/codex ]] || \
+  curl -fsSL https://chatgpt.com/codex/install.sh | PATH="$HOME/.local/bin:$PATH" sh >/dev/null 2>&1 \
+  || warn "Codex install failed"
 if ! have agy; then
   curl -fsSL https://antigravity.google/cli | bash >/dev/null 2>&1 \
     || curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/install.sh | bash >/dev/null 2>&1 \
