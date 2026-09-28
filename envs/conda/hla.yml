@@ -1,0 +1,6 @@
+name: hla
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - t1k>=1.0.10        # HLA typing from reads, for PharmCAT outside calls (genome-query scripts/pgx_outside.sh)

@@ -66,6 +66,9 @@ if [[ "${ENABLE_APPTAINER:-yes}" == "yes" ]] && ! have apptainer; then
     [[ -n "$url" ]] && download_deb "$url" || warn "apptainer not resolvable from apt or GitHub"
   fi
 fi
+# Without squashfuse and fuse2fs, apptainer unpacks every SIF into /tmp (an 8 GB tmpfs) instead of mounting it,
+# which fills /tmp during Nextflow runs (nf-core/raredisease in genome-query).
+[[ "${ENABLE_APPTAINER:-yes}" == "yes" ]] && apt_install squashfuse fuse2fs
 
 # ---- GitHub CLI ----
 add_apt_repo githubcli https://cli.github.com/packages/githubcli-archive-keyring.gpg \
