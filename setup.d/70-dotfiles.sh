@@ -14,6 +14,7 @@ link_dotfile cups/lpoptions    "$HOME/.cups/lpoptions"
 link_dotfile ghostty/config   "$HOME/.config/ghostty/config"
 link_dotfile ssh/config       "$HOME/.ssh/config"
 link_dotfile claude/settings.json "$HOME/.claude/settings.json"
+link_dotfile plasma-systemmonitor/health.page "$HOME/.local/share/plasma-systemmonitor/health.page"
 link_dotfile vscode/settings.json "$HOME/.config/Code/User/settings.json"
 # one machine guide for every agent
 link_dotfile agents/MACHINE.md "$HOME/.claude/CLAUDE.md"
