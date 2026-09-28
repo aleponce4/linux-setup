@@ -1,0 +1,12 @@
+[Unit]
+Description=Monthly genome annotation update (ClinVar and HPO)
+
+[Timer]
+# The 8th, after the 02:30 restic backup. ClinVar publishes weekly; monthly catches reclassifications
+# without a rebuild every week. Persistent runs a missed update at the next boot.
+OnCalendar=*-*-08 04:00
+Persistent=true
+Unit=genome-update.service
+
+[Install]
+WantedBy=timers.target

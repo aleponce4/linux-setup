@@ -1,0 +1,12 @@
+[Unit]
+Description=Fetch new ClinVar and HPO releases, rebuild the genome database, write a change note
+Documentation=file:///home/alexponce/work/personal/genome-query/CLAUDE.md
+RequiresMountsFor=/data
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/work/personal/genome-query
+# bash -lc: uv lives in ~/.local/bin, which is not on the default systemd PATH.
+ExecStart=/bin/bash -lc 'uv run genome update'
+Nice=10
+IOSchedulingClass=idle

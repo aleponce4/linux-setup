@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Code Remote Control session "genome" in the genome-query repo
+Documentation=file:///home/alexponce/work/personal/genome-query/CLAUDE.md
+After=default.target
+
+[Service]
+# Same pattern as strix-remote-session.service: a detached tmux session held by a forking unit.
+# scripts/remote-session.sh restarts claude if it exits, so the "genome" entry stays in the Claude app.
+Type=forking
+RemainAfterExit=yes
+ExecStart=/bin/bash -lc 'tmux has-session -t genome 2>/dev/null || tmux new-session -d -s genome -c %h/work/personal/genome-query %h/work/personal/genome-query/scripts/remote-session.sh'
+ExecStop=/bin/bash -lc 'tmux kill-session -t genome 2>/dev/null || true'
+
+[Install]
+WantedBy=default.target

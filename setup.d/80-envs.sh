@@ -75,6 +75,22 @@ while read -r repo subdir; do
   [[ -n "$repo" ]] && clone_repo "$repo" "$subdir"
 done < <(read_list "$LISTS_DIR/git-repos.txt")
 
+# ---- genome-query (personal genome annotation): monthly ClinVar/HPO update and a Claude Remote Control session ----
+# The data and database live on /data; only the code is in the repo. See its CLAUDE.md.
+GENOME_REPO="$WORK_DIR/personal/genome-query"
+if [[ -d "$GENOME_REPO/.git" ]]; then
+  git -C "$GENOME_REPO" config core.hooksPath .githooks   # pre-commit guard against committing genomic data
+  mkdir -p "$HOME/.config/systemd/user"
+  for u in genome-update.service genome-update.timer genome-claude.service; do
+    ln -sfn "$REPO_DIR/dotfiles/systemd/user/$u" "$HOME/.config/systemd/user/$u"
+  done
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable --now genome-update.timer genome-claude.service 2>/dev/null \
+    || warn "genome units did not start (check: systemctl --user status genome-claude genome-update.timer)"
+  [[ -f "$GENOME_REPO/config.local.toml" ]] \
+    || warn "genome-query has no config.local.toml; copy config.example.toml and fill it in"
+fi
+
 # ---- distrobox: other distros' userlands sharing $HOME (Docker backend; 'sg docker' works before the group is active) ----
 if [[ "${ENABLE_DISTROBOX:-yes}" == "yes" ]] && have distrobox; then
   while read -r name image; do

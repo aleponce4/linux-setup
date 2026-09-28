@@ -9,6 +9,13 @@ have used to fix it.
 | **KRDP** (`3389`) | the real Plasma desktop | tailnet |
 | **Claude Code Remote Control** | reply to a running session from phone/laptop | Claude app |
 
+## Standing agent sessions
+
+`genome-claude.service` (module 80) keeps a tmux session named `genome` in
+`~/work/personal/genome-query` running `claude --remote-control genome`, restarting it if it exits. Pick
+"genome" in the Claude app's Code tab to ask questions about the genome; the repo's `CLAUDE.md` holds the
+rules. `tmux attach -t genome` shows the same session locally.
+
 ## The persistent session
 
     ssh alexponce@strix

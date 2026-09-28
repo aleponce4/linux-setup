@@ -12,6 +12,7 @@ Onteko/ProLIBSpector                            onteko
 
 aleponce4/baby-weight-tracker                   personal
 eponce00/family-life-plan                       personal
+aleponce4/genome-query                          personal
 
 aleponce4/isaac-hpc                             tools
 cvat-ai/cvat                                    tools
