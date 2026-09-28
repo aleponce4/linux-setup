@@ -80,6 +80,7 @@ done < <(read_list "$LISTS_DIR/git-repos.txt")
 GENOME_REPO="$WORK_DIR/personal/genome-query"
 if [[ -d "$GENOME_REPO/.git" ]]; then
   git -C "$GENOME_REPO" config core.hooksPath .githooks   # pre-commit guard against committing genomic data
+  git -C "$GENOME_REPO" config genomequery.allowNames "alex Alex"   # the account holder may be named in the docs
   mkdir -p "$HOME/.config/systemd/user"
   for u in genome-update.service genome-update.timer genome-claude.service genome-portal.service; do
     ln -sfn "$REPO_DIR/dotfiles/systemd/user/$u" "$HOME/.config/systemd/user/$u"
