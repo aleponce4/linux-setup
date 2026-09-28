@@ -385,3 +385,15 @@ After it, seven hours at the thermal limit passed without incident.
 So heat alone does not freeze this machine, and DOCP is now the leading explanation. The
 kernel update landed in the same boot and cannot be excluded yet. Keep DOCP off. The CPU still
 needs the new cooler: 95.8 C means it was throttling all night.
+
+## New cooler, and an ambiguous stop (2026-09-27)
+
+Boot `0b375852` ran 47.5 h and ended Sep 26 07:32:21 with no shutdown sequence, at idle (load
+0.03, Tctl 54 C). The NVMe unsafe-shutdown counter rose 136 -> 139 before the next boot. Alex
+cut power around then to swap the cooler and thinks this stop was probably that, so it is not
+counted as a freeze. Treat the DOCP result as 47.5 h clean, and let the next week confirm it.
+
+The stock Wraith was replaced on Sep 27 and loose fan and front-panel cables were reconnected.
+All five fan headers now report RPM, where three read zero before. Idle Tctl is 37 C, down from
+55 to 60 C on the old cooler. The front USB-C port works: a Logitech Zone Wired headset enumerated
+on it at 480 Mb/s, which is that headset's own USB 2.0 limit.
