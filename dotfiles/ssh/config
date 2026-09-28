@@ -2,10 +2,10 @@
 
 # The old "uthsc-wsl" host is gone: it pointed at the WSL instance on the Windows machine this replaced.
 
-# ISAAC-NG (UT HPC). Verify the login hostname and set your NetID.
+# ISAAC-NG (UT HPC). Cluster guide: ~/work/tools/isaac-hpc.
 Host isaac
   HostName login.isaac.utk.edu
-  User CHANGE_ME_netid
+  User aponcefl
 
 Host github.com
   User git
