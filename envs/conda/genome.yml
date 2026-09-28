@@ -7,3 +7,4 @@ dependencies:
   - htslib>=1.24
   - samtools>=1.24
   - echtvar>=0.2.3
+  - annotsv>=3.5.10     # structural-variant annotation; annotations live in /data/datasets/refdata/GRCh38/annotsv-3.5
